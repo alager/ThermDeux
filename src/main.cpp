@@ -20,9 +20,9 @@ const int   daylightOffset_sec = 3600;
 
 
 
-void setup() {
-	struct tm timeinfo;
-
+void setup() 
+{
+	// configure super fast serial port
 	Serial.begin( 460800 );
 
 	// setup pin 5 as a digital output pin
@@ -52,24 +52,6 @@ void setup() {
 	Serial << ("Chip ID: ");
 	Serial.println( chipId, HEX);
 
-
-
-
-	// Init and get the time
-	configTime( 0, 0, ntpServer);
-
-	// setenv( "TZ", "America/Chicago", 1 );
-	// tzset();
-
-	if( !getLocalTime( &timeinfo ) )
-	{
-		Serial.println( "Failed to obtain time" );
-		return;
-	}
-
-	setTimezone( "CST6CDT,M3.2.0,M11.1.0" );
-	Serial << getDateTimeString().c_str() << endl;
-
 }
 
 void loop() {
@@ -88,6 +70,26 @@ void loop() {
 }
 
 
+void initTime()
+{
+	struct tm timeinfo;
+
+	// Init and get the time
+	configTime( 0, 0, ntpServer);
+
+	if( !getLocalTime( &timeinfo ) )
+	{
+		Serial.println( "Failed to obtain time" );
+		return;
+	}
+
+	// this is "America/Chicago" or central time
+	setTimezone( "CST6CDT,M3.2.0,M11.1.0" );
+	Serial << getDateTimeString().c_str() << endl;
+}
+
+
+// takes the special timezone strings
 void setTimezone(String timezone)
 {
 	Serial.printf( "  Setting Timezone to %s\n",timezone.c_str() );
@@ -95,6 +97,8 @@ void setTimezone(String timezone)
 	tzset();
 }
 
+
+// 
 std::string getDateTimeString()
 {
 	struct tm timeinfo;
