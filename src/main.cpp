@@ -1,35 +1,67 @@
 #include <Arduino.h>
-#include <time.h>
 #include <Streaming.h>
 #include <FS.h>
+#include <LittleFS.h>
 #include <WiFi.h>
-#include <AsyncTCP.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
 
+#include <myThermostat.h>
 #include <main.h>
 
 
-const int ledPin = 2;
-
+// global variables
+MyThermostat *someTherm;
 
 const char* ssid     = "NestRouter1";
 const char* password = "This_isapassword9";
 
-const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = 0;
-const int   daylightOffset_sec = 3600;
-
+const char* ntpServer1 = "at.pool.ntp.org";
+const char* ntpServer2 = "time.nist.gov";
 
 
 void setup() 
 {
+	uint32_t chipId = 0;
+
 	// configure super fast serial port
 	Serial.begin( 460800 );
+	// Serial.begin( 115200 );
 
-	// setup pin 5 as a digital output pin
-	pinMode (ledPin, OUTPUT);
+	Serial << "CPU Freq: " << getCpuFrequencyMhz() << endl;
 
-	WiFi.begin(ssid, password);
-	while (WiFi.status() != WL_CONNECTED)
+	// MyThermostat someThermObj;
+	someTherm = new MyThermostat;
+
+	// init the object for first run
+	someTherm->init();
+
+	// debug, set the mode to cooling
+	#ifdef _DEBUG_
+	  Serial << ( F( "isMode: " )) << someTherm->getMode() << endl;
+	#endif
+
+	// Initialize SPIFFS
+	if(!LittleFS.begin())
+	{
+		Serial << ( F( "An Error has occurred while mounting LittleFS" )) << endl;
+		return;
+	}
+	
+	for(int i=0; i<17; i=i+8) 
+	{
+		chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+	}
+	Serial << ("MAC Address: ");
+	Serial.println( chipId, HEX);  // this won't print correctly using the stdout notation
+
+	Serial << ("WiFi STA.") << endl;
+ 	WiFi.mode(WIFI_STA);
+
+
+	Serial << ( "Connecting to WiFi." ) << endl;
+	WiFi.begin( ssid, password );
+	while( WiFi.status() != WL_CONNECTED )
 	{
 		delay(500);
 		Serial << (".");
@@ -38,35 +70,42 @@ void setup()
 	Serial << ("WiFi connected.") << endl;
 	Serial << ("Wifi RSSI=") << WiFi.RSSI() << endl;
 	Serial << ( WiFi.localIP() ) << endl;
-	Serial << "chip ID: 0x";
-	// Serial.println( ESP.getChipId(), HEX); // this won't print correctly using the stdout notation
-
-	uint32_t chipId = 0;
-	for(int i=0; i<17; i=i+8) 
-	{
-		chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
-	}
 
 	Serial.printf("ESP32 Chip model = %s Rev %d\n", ESP.getChipModel(), ESP.getChipRevision());
 	Serial.printf("This chip has %d cores\n", ESP.getChipCores());
-	Serial << ("Chip ID: ");
-	Serial.println( chipId, HEX);
 
-}
+	initTime();
+
+} // end setup()
+
 
 void loop() {
   // put your main code here, to run repeatedly:
 
 	Serial << ( "high") << endl;
-	digitalWrite (ledPin, HIGH);	// turn on the LED
 	delay(1500);	// wait for half a second or 500 milliseconds
 
 	Serial << ( "low") << endl;
 
-	digitalWrite (ledPin, LOW);	// turn off the LED
 	delay(1500);	// wait for half a second or 500 milliseconds
 
 	Serial << getDateTimeString().c_str() << endl;
+
+	// if( Ping.ping("www.google.com", 3) )
+	// {
+	// 	Serial << ("Ping succesful.") << endl;
+	// }
+	// else
+	// {
+	// 	Serial << ("Ping failed.") << endl;
+
+	// }
+
+	// no more blinking if wifi dies
+	while(WiFi.status() != WL_CONNECTED)
+	{
+		delay( 1000 );
+	}
 }
 
 
@@ -75,7 +114,8 @@ void initTime()
 	struct tm timeinfo;
 
 	// Init and get the time
-	configTime( 0, 0, ntpServer);
+	configTime( 0, 0, ntpServer1, ntpServer2 );
+	// configTzTime( "CST6CDT,M3.2.0,M11.1.0", ntpServer );
 
 	if( !getLocalTime( &timeinfo ) )
 	{
