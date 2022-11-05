@@ -1,0 +1,320 @@
+:root {
+	--marioX: -15px;	/*use with right*/
+	--marioY: 130px;	/*use with top*/
+}
+
+/* define our Mario element sprites */
+.sprite {
+    /* background: url("Mario_3_sprites.jpg") no-repeat; */
+	background: url("thermSprites.jpg") no-repeat;
+}
+
+
+/* select the Mario Standing Sprite */
+.fanSprite {
+	width: 40px; /* Icon width */
+	height: 42px; /* Icon height */
+	display: inline-block; /* Display icon as inline block */
+	zoom: 120%;
+	background-position: -172px -425px; /* Icon background position in sprite */
+
+	/* this won't move, so position it here */
+	position: absolute;
+	top: 127px;
+	left: -7px;
+}
+
+.fanSpin
+{
+	animation-name: spinny;
+	animation-duration: 90ms;
+	animation-iteration-count: infinite;
+}
+
+@keyframes spinny
+{
+	0% {
+		transform: rotate(-20deg);
+	}
+	50% {
+		transform: rotate(20deg);
+	}
+}
+
+
+#fanTimeId
+{
+	top: 12.5em;
+	position: absolute;
+	left: 0.25em;
+}
+
+/* select the Mario Standing Sprite */
+.marioStanding {
+	width: 46px; /* Icon width */
+    height: 50px; /* Icon height */
+	display: inline-block; /* Display icon as inline block */
+	zoom: 120%;
+	background-position: -196px -177px; /* Icon background position in sprite */
+}
+
+/* select the Mario Jumping Sprite */
+.marioJumping {
+	width: 51px; /* Icon width */
+    height: 78px; /* Icon height */
+	display: inline-block; /* Display icon as inline block */
+	zoom: 100%;
+	background-position: -265px -153px; /* Icon background position in sprite */
+}
+
+.marioMoveUp {
+	animation-name: MarioJump;
+	animation-duration: 500ms;
+	animation-iteration-count: 1;
+}
+
+@keyframes MarioJump {
+	0%   { right:var(--marioX); top:var(--marioY);}
+	50%  { right:var(--marioX); top:63px;}
+	100% { right:var(--marioX); top:var(--marioY);}
+}
+
+.marioMoveDown {
+	animation-name: MarioFall;
+	animation-duration: 500ms;
+	animation-iteration-count: 1;
+}
+
+@keyframes MarioFall {
+	0%   { right:var(--marioX); top:var(--marioY);}
+	50%  { right:var(--marioX); top:233px;}
+	100% { right:var(--marioX); top:var(--marioY);}
+}
+
+/* Positions for Mario */
+.middleRight {
+	position: absolute;
+	top: var(--marioY);
+	right: var(--marioX);
+}
+
+/* Positions for Mario */
+.middleRightJumping {
+	position: absolute;
+	top: var(--marioY);
+	right: var(--marioX);
+}
+
+/* select the block sprite */
+.blockSprite {
+	width: 51px; /* Icon width */
+    height: 56px; /* Icon height */
+	display: inline-block; /* Display icon as inline block */
+	background-position: -130px -75px; /* Icon background position in sprite */
+	cursor: pointer;
+}
+
+.blockPosition{
+	position: absolute;
+	top: 10px;
+	right: -15px;
+}
+
+/* select the block sprite */
+.pipeSprite {
+	width: 100px; /* Icon width */
+    height: 100px; /* Icon height */
+	display: inline-block; /* Display icon as inline block */
+	background-position: -24px -393px; /* Icon background position in sprite */
+	cursor: pointer;
+}
+
+.pipePosition{
+	position: absolute;
+	top: 250px;
+	right: -43px;
+}
+
+.hammerSprite {
+	width: 50px; /* Icon width */
+    height: 53px; /* Icon height */
+	display: inline-block; /* Display icon as inline block */
+	background-position: -580px -8px; /* Icon background position in sprite */
+
+	/* this won't move, so position it here */
+	position: absolute;
+	top: 240px;
+	left: -20px;
+	zoom: 120%;
+
+	cursor: pointer;
+}
+
+.starSprite {
+	width: 50px; /* Icon width */
+    height: 53px; /* Icon height */
+	display: inline-block; /* Display icon as inline block */
+	background-position: -270px -8px; /* Icon background position in sprite */
+
+	/* this won't move, so position it here */
+	position: absolute;
+	top: 240px;
+	left: -10px;
+	zoom: 120%;
+
+	cursor: pointer;
+}
+
+/* Themostat view container */
+.container {
+	position: relative;
+}
+
+/* Fonts */
+@font-face {
+    font-family: "marioFont";
+	src: url("marioFont.woff"), url("marioFont.woff") format('woff');
+}
+
+.marioDiv {
+    font-family: marioFont
+}
+
+.temperatureDisplay {
+	font-size: 260px;
+	position: absolute;
+	top: -40px;
+	left: 40px;
+	-webkit-text-stroke: 1px black;
+}
+
+.temperatureSetting {
+	font-size: 90px;
+	position: absolute;
+	top: 240px;
+	left: 200px;
+	-webkit-text-stroke: 1px black;
+}
+
+.heating {
+	color:red;
+}
+
+.cooling {
+	color:blue;
+}
+
+.off {
+	color:slategrey;
+}
+
+/* style the mode text */
+#mode {
+	position: absolute;
+	font-size: 50px;
+	left: 140px;
+	top: 10px;
+}
+
+/* style the mode button */
+#clickMode {
+	position: absolute;
+	font-size: 20px;
+	left: -22px;
+	top: 25px;
+	border-radius: 4px;
+}
+
+#delayId {
+	animation: blinker 1s linear infinite;
+	position: absolute;
+	font-size: 50px;
+	left: 350px;
+	top: 10px;
+}
+
+@keyframes blinker {
+	50% {
+		opacity: 0;
+	}
+}
+
+* {box-sizing:border-box}
+
+/* Hide the images by default */
+.mySlides {
+	display: none;
+	position: absolute;
+	left: 100px;
+}
+
+/* Next & previous buttons */
+.prev, .next {
+	cursor: pointer;
+	position: absolute;
+	top: 50%;
+	width: auto;
+	margin-top: -22px;
+	padding: 16px;
+	font-weight: bold;
+	font-size: 18px;
+	transition: 0.6s ease;
+	border-radius: 0 3px 3px 0;
+	user-select: none;
+}
+
+/* Position the "next button" to the right */
+.next {
+	right: 0;
+	border-radius: 3px 0 0 3px;
+}
+
+/* Caption text */
+.text {
+	font-size: 15px;
+	padding: 8px 12px;
+	position: absolute;
+	bottom: 30px;
+	width: 100%;
+	text-align: center;
+}
+
+.cardSize{
+	height: 150px;
+	width: 500px;
+}
+
+/* The dots/bullets/indicators */
+.dot {
+	cursor: pointer;
+	height: 15px;
+	width: 15px;
+	margin: 0 2px;
+	background-color: #bbb;
+	border-radius: 50%;
+	display: inline-block;
+	transition: background-color 0.6s ease;
+}
+
+.active, .dot:hover {
+	background-color: #717171;
+}
+
+#humidity {
+	position: absolute;
+	left: 400px;
+	font-size: 20px;
+}
+
+#pressure {
+	position: absolute;
+	left: 140px;
+	font-size: 20px;
+}
+
+#dsplyTime {
+	position: absolute;
+	font-size: 25px;
+	left: 170px;
+	top: 330px;
+}

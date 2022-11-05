@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!-- force full screen? -->
+	<meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+	<link rel="stylesheet" href="mario.css">
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.min.js" integrity="sha384-skAcpIdS7UcVUC05LJ9Dxay8AXcDYfBJqt1CJ85S/CFujBsIzCIv+l9liuYLaMQ/" crossorigin="anonymous"></script>
+	
+	<title>Lager Stat</title>
+
+<script>
+
+var chart;
+var data;
+const chartHeight = 500;
+var slideIndex = 1;
+
+// variables for elements
+var mario;
+var modeSetting;
+var tempSet;
+var temperature;
+var humidityValue;
+var pressureValue;
+var delayId;
+var thermostatView;
+var settingsView;
+var dsplyTime;
+var fanId;
+var fanTimeId;
+
+// to handle websocket (re)connections
+const gateway = `ws://${window.location.hostname}/ws`;
+var websocket;
+var sockTimer=null;
+const wsRetry = 30; // number of seconds to wait for retry
+
+function initWebSocket() 
+{
+	console.log( 'Trying to open a WebSocket connection...' );
+	websocket = new WebSocket( gateway );
+	websocket.onopen =		onOpen;
+	websocket.onerror =		onError;
+	websocket.onclose = 	onClose;
+	websocket.onmessage =	onMessage;
+}
+
+function onOpen( event ) 
+{
+	clearInterval( sockTimer );
+	console.log( 'Connection opened' );
+}
+
+function onError( event )
+{
+	console.log( 'Connection error - trying again' );
+	sockTimer = setInterval( initWebSocket, 1000 * wsRetry );
+}
+
+function onClose( event ) 
+{
+	console.log( 'Connection closed - reconnecting' );
+	sockTimer = setInterval( initWebSocket, 1000 * wsRetry );
+}
+
+// The websocket received  amessage, so process it
+function onMessage( event ) 
+{
+	if( typeof( event.data ) != "string" )
+	{
+		// these are not the droids we're looking for
+		return;
+	}
+
+	// parse it into JSON
+	var data = JSON.parse( event.data );
+
+	
+	if( data.hasOwnProperty( "tempSet" ) )
+	{
+		//console.log( "DEBUG tempSet");
+		tempSet.innerHTML = parseFloat( data.tempSet ).toFixed( 1 );
+	}
+	else
+	if( data.hasOwnProperty( "telemetry" ) )
+	{
+		var tlm = data.telemetry;
+		
+		temperature.innerHTML = parseFloat( tlm.tempAvg ).toFixed( 1 );
+		tempSet.innerHTML = parseFloat( tlm.tempSetting ).toFixed( 1 );
+		pressureValue.innerHTML = parseFloat( tlm.presAvg ).toFixed( 1 );
+		humidityValue.innerHTML = parseFloat( tlm.humidAvg ).toFixed( 1 );
+		dsplyTime.innerHTML = tlm.time;
+
+		if( tlm.fanTime === 0 || typeof( tlm.fanTime ) == "undefined" )
+		{
+			// the timer has expired, so lets remove the counter and stop the fan
+			fanTimeId.innerHTML = "";
+			fanId.classList.remove( "fanSpin" );
+		}
+		else
+		{
+			const minutes = ~~(tlm.fanTime / 60);	// the ~~ gives the integer minutes
+			const seconds = tlm.fanTime % 60;		// the mod gives the integer seconds
+			fanTimeId.innerHTML = minutes + ":" + String( seconds ).padStart( 2, "0" );
+			fanId.classList.add( "fanSpin" );
+		}
+
+		var modeStr;
+		if( tlm.mode == 0 )
+		{
+			modeStr = "Off";
+			modeColor = "off";
+			tempSet.innerHTML = "Off";
+			delayId.hidden = false;
+
+		}
+		else
+		if( tlm.mode == 1 )
+		{
+			modeStr = "Cooling";
+			modeColor = "cooling";
+		}
+		else
+		if( tlm.mode == 2 )
+		{
+			modeStr = "Heating";
+			modeColor = "heating";
+		}
+
+		modeSetting.innerHTML = modeStr;
+		tempSet.classList.remove( "off", "cooling", "heating" );
+		tempSet.classList.add( modeColor );
+
+		if( tlm.currentMode == "0" )
+		{
+			modeColor = "off";
+
+			// hide the delay blinker because we aren't trying to turn the compressor on
+			delayId.hidden = true;
+		}
+		else
+		if( tlm.currentMode == "1" )
+		{
+			modeColor = "cooling";
+
+			// show delay because there is a request for cooling
+			if( tlm.delayTime )
+				delayId.hidden = false;
+			else
+				delayId.hidden = true;
+		}
+		else
+		if( tlm.currentMode == "2" )
+		{
+			modeColor = "heating";
+
+			// show delay because there is a request for heating
+			if( tlm.delayTime )
+				delayId.hidden = false;
+			else
+				delayId.hidden = true;
+		}
+
+		// change the color for the current state
+		temperature.classList.remove( "off", "cooling", "heating" );
+		temperature.classList.add( modeColor );
+		
+		// draw an XY line chart
+		// data = thermLineChart( tempAvg, humidAvg, presAvg );
+		// d3.select('#chart svg')    //Select the <svg> element you want to render the chart in.   
+		// 	.datum(data)         //Populate the <svg> element with chart data...
+		// 	.call(chart);          //Finally, render the chart!
+	}
+	else
+	if( data.hasOwnProperty( "modeSet" ) )
+	{
+		var mode = data.modeSet;
+		var modeStr;
+		var modeColor;
+
+		if( mode == 0 )
+		{
+			modeStr = "Off";
+			modeColor = "off";
+			tempSet.innerHTML = "Off";
+			delayId.hidden = false;
+		}
+		else
+		if( mode == 1 )
+		{
+			modeStr = "Cooling";
+			modeColor = "cooling";
+		}
+		else
+		if( mode == 2 )
+		{
+			modeStr = "Heating";
+			modeColor = "heating";
+		}
+
+		modeSetting.innerHTML = modeStr;
+		tempSet.classList.remove( "off", "cooling", "heating" );
+		tempSet.classList.add( modeColor );
+	}
+	else
+	if( data.hasOwnProperty( "currentMode" ) )
+	{
+		var currentMode = data.currentMode;
+
+		if( currentMode == "0" )
+		{
+			modeColor = "off";
+		}
+		else
+		if( currentMode == "1" )
+		{
+			modeColor = "cooling";
+		}
+		else
+		if( currentMode == "2" )
+		{
+			modeColor = "heating";
+		}
+
+		// change the color for the current state
+		temperature.classList.remove( "off", "cooling", "heating" );
+		temperature.classList.add( modeColor );
+	}
+	else
+	if( data.hasOwnProperty( "delay" ) )
+	{
+		var dly = data.delay;
+		// if the delay is true, then set the hidden attribute to false
+		const trueFalse = ( dly.delay == "true" ) ? false : true;
+		delayId.hidden = trueFalse;
+	}
+	else
+	if( data.hasOwnProperty( "settings" ) )
+	{
+		var settings = data.settings;
+		var fanDelay =	document.getElementById('fanDelay');
+		var compressorOffDelay = document.getElementById('compressorOffDelay');
+		var compressorMaxRuntime = document.getElementById('compressorMaxRuntime');
+
+		fanDelay.value = settings.fanDelay;
+		compressorOffDelay.value = settings.compressorOffDelay;
+		compressorMaxRuntime.value = settings.compressorMaxRuntime;
+
+		const tzVal = getObjKey( tzMap, settings.timeZone );
+		document.querySelector("input[name=timeZone][value=" + tzVal +"]").click();
+	}
+	else
+	if( data.hasOwnProperty( "fanClick" ) )
+	{
+		var fanClick = data.fanClick;
+
+		if( fanClick.hasOwnProperty( "add15minutes") )
+		{
+			// turn on fan spinny class
+			fanId.classList.add( "fanSpin" );
+		}
+		else
+		if( fanClick.hasOwnProperty( "off") )
+		{
+			// turn the fan spinny off
+			fanId.classList.remove( "fanSpin" );
+		}
+	}
+}
+
+// do a reverse lookup for key by value
+function getObjKey(obj, value) 
+{
+  return Object.keys(obj).find(key => obj[key] === value);
+}
+
+var tzMap = {
+	none: 0,
+	ePST: 1,
+	eMST: 2,
+	eCST: 3,
+	eEST: 4
+};
+
+// get all the settings and send them back to the server
+function saveSettings()
+{
+	var fanDelay =				document.getElementById( 'fanDelay' );
+	var compressorOffDelay = 	document.getElementById( 'compressorOffDelay' );
+	var compressorMaxRuntime = 	document.getElementById( 'compressorMaxRuntime' );
+	var timeZone = 				document.querySelector('input[name="timeZone"]:checked');
+
+	var settings = {};
+	settings.fanDelay = fanDelay.value;
+	settings.compressorMaxRuntime = compressorMaxRuntime.value;
+	settings.compressorOffDelay = compressorOffDelay.value;
+	settings.timeZone =  tzMap[ timeZone.value ];
+	
+	var mySettings = {};
+	mySettings.settings = settings;
+
+	websocket.send( JSON.stringify( mySettings ) );
+}
+
+// graphing javascript
+/*These lines are all chart setup.  Pick and choose which chart features you want to utilize. */
+function addGraph()
+{
+	chart = nv.models.lineChart()
+		.margin({ left: 100 })  //Adjust chart margins to give the x-axis some breathing room.
+		.useInteractiveGuideline(true)  //We want nice looking tooltips and a guideline!
+		.duration(350)  //how fast do you want the lines to transition?
+		.showLegend(true)       //Show the legend, allowing users to turn on/off line series.
+		.showYAxis(true)        //Show the y-axis
+		.showXAxis(true)        //Show the x-axis
+		.height( chartHeight )	// set the height
+		;
+
+	chart.xAxis     //Chart x-axis settings
+		.axisLabel('Time (10s)')
+		.tickFormat(d3.format(',r'));
+
+	chart.yAxis     //Chart y-axis settings
+		.axisLabel('Temperature (°F)')
+		.tickFormat(d3.format('.02f'));
+
+
+	d3.select('#chart').append( 'svg' )    //add the <svg> element you want to render the chart in.  
+		.attr("height", chartHeight ) 
+		.datum(data)         //Populate the <svg> element with chart data...
+		.call(chart);          //Finally, render the chart!
+
+
+	//Update the chart when window resizes.
+	nv.utils.windowResize(chart.update);
+	return chart;
+};
+
+
+// make a line chart of the temperature data
+var temp=[], hum=[], pres=[];
+var chartIdx=0;
+function thermLineChart( temperature, humidity, pressure )
+{
+	// push an {xy} object onto the array
+	temp.push( {x: chartIdx, y: temperature} );
+	hum.push( {x: chartIdx, y: humidity} );
+	pres.push({ x: chartIdx, y: pressure});
+
+	chartIdx++;
+	if( chartIdx > 1000 )
+	{
+		// reset the array
+		temp.length=0;
+		hum.length = 0;
+		pres.length = 0;
+		chartIdx=0;
+	}
+
+	// return an array of objects
+	return [
+		{
+			values: temp,
+			key: "Temperature",
+			color: "#2ca02c"
+		},
+		{
+			values: hum,
+			key: "Humidity",
+			color: "#203020"
+		},
+		{
+			values: pres,
+			key: "Pressure",
+			color: "#f02010"
+		}
+	];
+}
+
+
+function initButtons()
+{
+	document.getElementById('topBlock').addEventListener('click', clickUp);
+	document.getElementById('pipe').addEventListener('click', clickDown);
+
+	document.getElementById('clickMode').addEventListener('click', clickMode);
+	document.getElementById('hammer').addEventListener('click', clickHammer);
+	document.getElementById('star').addEventListener('click', clickStar);
+	fanId = document.getElementById('fan');
+	fanId.addEventListener('click', clickFan);
+	fanId.addEventListener('long-press', longClickFan);
+
+
+	modeSetting =	document.getElementById('mode');
+	tempSet =		document.getElementById('tempSet');
+	temperature =	document.getElementById('temperature');
+	humidityValue =		document.getElementById('humidityValue');
+	pressureValue =		document.getElementById('pressureValue');
+	delayId =		document.getElementById('delayId');
+	thermostatView = document.getElementById('thermostatView');
+	settingsView =	document.getElementById('settingsView');
+	dsplyTime =		document.getElementById( 'dsplyTime' );
+	fanTimeId =		document.getElementById( 'fanTimeId' );
+
+
+	// populate an element that we animate 
+	mario = document.getElementById('mario');
+
+	// event listener for mario animation end
+	mario.addEventListener('animationend', () => 
+	{ 
+		if( mario.classList.contains( "marioMoveUp" ) )
+		{
+			mario.classList.remove( "marioMoveUp" );
+			mario.classList.add( "marioStanding" );
+			mario.classList.remove( "marioJumping" );
+		}
+		else
+		if( mario.classList.contains( "marioMoveDown" ) )
+			mario.classList.remove( "marioMoveDown" );
+	});
+}
+
+
+function longClickFan(  )
+{
+	// prevent the click event from triggering immediately
+	fanId.removeEventListener( 'click', clickFan );
+
+	var fanClick = {};
+	var fan = {};
+	fanClick.off = true;
+	fan.fanClick = fanClick;
+	websocket.send( JSON.stringify( fan ));
+
+	// re-enable the click after 3 seconds
+	setTimeout( () => fanId.addEventListener('click', clickFan), 3000 );
+}
+
+function clickFan(  )
+{
+	var fanClick = {};
+	var fan = {};
+	fanClick.add15minutes = true;
+	fan.fanClick = fanClick;
+	websocket.send( JSON.stringify( fan ));
+}
+
+// change to the settings view
+function clickHammer()
+{
+	thermostatView.hidden = true;
+	settingsView.hidden = false;
+
+	// request the server send the settings up
+	websocket.send( "sendSettings" );
+}
+
+// change to the thermostat view
+function clickStar()
+{
+	thermostatView.hidden = false;
+	settingsView.hidden = true;
+
+	// send settings back to the server to be saved
+	saveSettings();
+}
+
+
+// clicked the up button
+function clickUp()
+{
+
+	websocket.send( "temperatureUp" );
+
+	// marioJumping
+	mario.classList.remove( "marioStanding" );
+	mario.classList.add( "marioJumping" );
+	mario.classList.add("marioMoveUp");
+	
+}
+
+// clicked the down button
+function clickDown()
+{
+	websocket.send( "temperatureDown" );
+
+	// marioJumping
+	mario.classList.add("marioMoveDown");
+}
+
+// clicked the mode button
+function clickMode()
+{
+	websocket.send( "modeClick" );
+}
+
+document.addEventListener("DOMContentLoaded", function(event) 
+{
+    // Your code to run since DOM is loaded and ready
+	initWebSocket();
+	initButtons();
+	// addGraph();
+
+	showSlides(slideIndex);
+});
+
+
+
+
+// Next/previous controls
+function plusSlides(n) {
+  showSlides(slideIndex += n);
+}
+
+// Thumbnail image controls
+function currentSlide(n) {
+  showSlides(slideIndex = n);
+}
+
+function showSlides(n) {
+  var i;
+  var slides = document.getElementsByClassName("mySlides");
+  var dots = document.getElementsByClassName("dot");
+  if (n > slides.length) {slideIndex = 1}
+  if (n < 1) {slideIndex = slides.length}
+  for (i = 0; i < slides.length; i++) {
+      slides[i].style.display = "none";
+  }
+  for (i = 0; i < dots.length; i++) {
+      dots[i].className = dots[i].className.replace(" active", "");
+  }
+  slides[slideIndex-1].style.display = "block";
+  dots[slideIndex-1].className += " active";
+}
+
+
+
+</script>
+	<script src="longClick.js" defer></script>
+	</head>
+	<body>
+		<div id="thermostatView">
+			<!--Mario interface-->
+			<div class="container marioDiv">
+				<!--Fan control-->
+				<div id="fan" class="sprite fanSprite"></div>
+				<div id="fanTimeId">0:00</div>
+
+				<!-- hammer takes user to settings -->
+				<div id="hammer" class="sprite hammerSprite"></div>
+
+				<button id="clickMode">Mode</button> <span id="mode">Heating</span><span id="delayId"> -- Delay</span>
+				<div id="topBlock" class="sprite blockSprite blockPosition"></div>
+				<div id="mario" class="sprite marioStanding middleRight"></div>
+				<div id="pipe" class="sprite pipeSprite pipePosition"></div>
+				<div id="temperature" class="temperatureDisplay off">88.8</div>
+				<div id="tempSet" class="temperatureSetting off">99.9</div>
+				<div id="humidity">Humidity: <span id="humidityValue">11.1</span> %</div>
+				<div id="pressure">Pressure: <span id="pressureValue">22.2</span> mmHg</div>
+				<div id="dsplyTime">13:12:11</div>
+			</div>
+		</div>
+		<!--This is the controls deleopment div below-->
+		<div id="settingsView"  class="container" hidden>
+			<h1><center>Settings</center></h1>
+			<div>
+				<!-- Slideshow container -->
+				<div>
+					<!-- Full-width images with number and caption text -->
+					<div class="mySlides">
+						<div class="cardSize">
+							<label for="fanDelay">Fan Delay:</label>
+							<input type="number" id="fanDelay" name="fanDelay" placeholder="seconds"><br>
+						</div>
+						<div class="text">Enter the number of seconds for the fan to run after the compressor turns off. This 
+							will improve energy efficiency.
+						</div>
+					</div>
+					<div class="mySlides">
+						<div class="cardSize">
+							<label for="compressorOffDelay">Compressor Off Delay:</label>
+							<input type="number" id="compressorOffDelay" name="compressorOffDelay" placeholder="seconds"><br>
+						</div>
+						<div class="text">Enter the number of seconds for the compressor to remain off before starting up again.</div>
+					</div>
+				
+					<div class="mySlides">
+						<div class="cardSize">
+							<label for="compressorMaxRuntime">Compressor Max Runtime:</label>
+							<input type="number" id="compressorMaxRuntime" name="compressorMaxRuntime" placeholder="minutes"><br>
+						</div>
+						<div class="text">Enter the number of minutes that the compressor is allowed to run before force shutoff.</div>
+					</div>
+
+					<div class="mySlides">
+						<div class="cardSize">
+							<label for="timeZone">Timezone:</label><br>
+							<input type="radio" name="timeZone" value="ePST"><label>Pacific</label><br>
+							<input type="radio" name="timeZone" value="eMST"><label>Mountian</label><br>
+							<input type="radio" name="timeZone" value="eCST"><label>Central</label><br>
+							<input type="radio" name="timeZone" value="eEST"><label>Eastern</label><br>
+						</div>
+						<br><br><br>
+						<div class="text">Select the US timezone for this location</div>
+					</div>
+			
+					<!-- Next and previous buttons -->
+					<a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+					<a class="next" onclick="plusSlides(1)">&#10095;</a>
+					<div id="star" class="sprite starSprite"></div>
+				</div>
+				<br><br><br><br><br><br><br><br><br>
+			
+				<!-- The dots/circles -->
+				<div style="text-align:center">
+					<span class="dot" onclick="currentSlide(1)"></span>
+					<span class="dot" onclick="currentSlide(2)"></span>
+					<span class="dot" onclick="currentSlide(3)"></span>
+					<span class="dot" onclick="currentSlide(4)"></span>
+				</div>
+			</div>
+
+			<div class='with-3d-shadow with-transitions' >
+				<div id="chart"></div>
+			</div>
+		</div>
+	</body>
+</html>
