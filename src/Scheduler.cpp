@@ -1,14 +1,16 @@
-
 #include "Arduino.h"
 #include <string>
-// #include <ezTime.h>
 #include <Streaming.h>
 #include <time.h>		// time() ctime()
 #include <sys/time.h>		// struct timeval
 
 #include <Scheduler.h>
 
-const char* ntpServer = "pool.ntp.org";
+// our NTP servers
+const char* ntpServer1 = "pool.ntp.org";
+const char* ntpServer2 = "time.nist.gov";
+
+// const char* ntpServer = "pool.ntp.org";
 const int daylightOffset_sec = 3600;
 const long gmtOffset_sec = 0;
 // struct tm timeinfo;
@@ -19,30 +21,14 @@ Scheduler::Scheduler()
 	// time zone string array
 	// must be in the same order as timezone_e
 	timeZoneStr[0] = std::string();	//empty string
-	timeZoneStr[1] = "America/Los_Angeles";
-	timeZoneStr[2] = "America/Denver";
-	timeZoneStr[3] = "America/Chicago";
-	timeZoneStr[4] = "America/New_York";
+	timeZoneStr[1] = "PST8PDT,M3.2.0,M11.1.0"; //"America/Los_Angeles";
+	timeZoneStr[2] = "MST7MDT,M3.2.0,M11.1.0"; //"America/Denver";
+	timeZoneStr[3] = "CST6CDT,M3.2.0,M11.1.0"; //"America/Chicago";
+	timeZoneStr[4] = "EST5EDT,M3.2.0,M11.1.0"; //"America/New_York";
 
-	configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+	weHaveTime = false;
 }
 
-
-// bool getLocalTime(struct tm * info )
-// {
-// 	uint32_t ms = 5000;
-//     uint32_t start = millis();
-//     time_t now;
-//     while((millis()-start) <= ms) {
-//         time(&now);
-//         localtime_r(&now, info);
-//         if(info->tm_year > (2016 - 1900)){
-//             return true;
-//         }
-//         delay(10);
-//     }
-//     return false;
-// }
 
 // tickTemperature is run
 newTemperature_t Scheduler::tickTemperature( SchedMode_e mode )
@@ -140,26 +126,59 @@ void Scheduler::init( timezone_e new_tz )
 {
 	this->tz = new_tz;
 
-	// debug ezTime
-	// setDebug(INFO);
+	// Init and get the time
+	configTime( 0, 0, ntpServer1, ntpServer2 );
 
 	Serial << (F( "Syncing NTP" ) ) << endl;
-	if(!getLocalTime(&timeinfo))
+	if( !getLocalTime( &timeinfo ) )
 	{
 		Serial.println("Failed to obtain time");
 		return;
 	}
-	// wait for ezTime to sync
-	// waitForSync();
+	
+	// this is "America/Chicago" or central time "CST6CDT,M3.2.0,M11.1.0"
+	setTimezone( timeZoneStr[ tz ].c_str() );
+	weHaveTime = true;
+
+	Serial << getDateTimeString().c_str() << endl;
 
 	// Provide official timezone names
 	// https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 	Serial <<  F("Timezone: " ) << timeZoneStr[ tz ].c_str() << endl;
-	// Serial <<  myTZ.dateTime() << endl;
-	Serial << (&timeinfo, "%A, %B %d %Y %H:%M:%S") << endl;
+	Serial << ( &timeinfo, "%A, %B %d %Y %H:%M:%S" ) << endl;
 
 	// myTZ.setLocation( timeZoneStr[ tz ].c_str() );
 	// myTZ.setDefault();
+}
+
+std::string Scheduler::getDateTimeString()
+{
+	struct tm timeinfo;
+
+	if( !getLocalTime( &timeinfo ) )
+	{
+		Serial.println( "Failed to obtain time" );
+		return( "Failed to obtain time" );
+	}
+
+	Serial.println( &timeinfo, "%A, %B %d %Y %H:%M:%S" );
+	
+	//50 chars should be enough
+	char timeStringBuff[50];
+	strftime( timeStringBuff, sizeof(timeStringBuff), "%A, %B %d %Y %H:%M:%S", &timeinfo );
+
+	std::string foo( timeStringBuff );
+	return foo;
+}
+
+
+void Scheduler::setTimezone( String timezone )
+{
+	Serial.printf( "Setting Timezone to %s\n", timezone.c_str() );
+
+	//  Now adjust the TZ.  Clock settings are adjusted to show the new local time
+	setenv( "TZ", timezone.c_str(), 1 );
+	tzset();
 }
 
 
