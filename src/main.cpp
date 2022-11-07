@@ -24,26 +24,23 @@ MyThermostat *someTherm;
 const char* ssid     = "NestRouter1";
 const char* password = "This_isapassword9";
 
-// our NTP servers
-const char* ntpServer1 = "at.pool.ntp.org";
-const char* ntpServer2 = "time.nist.gov";
-
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 
 // create a web socket object
 AsyncWebSocket webSock("/ws");
 
+// let us know if getting NTP time worked
+// bool weHaveTime = false;
+
 
 void setup() 
 {
-	
-
 	// configure super fast serial port
 	Serial.begin( 460800 );
 	// Serial.begin( 115200 );
 
-	Serial << "CPU Freq: " << getCpuFrequencyMhz() << endl;
+	Serial << ( F( "CPU Freq: ")) << getCpuFrequencyMhz() << endl;
 
 	// MyThermostat someThermObj;
 	someTherm = new MyThermostat;
@@ -59,7 +56,7 @@ void setup()
 	// Initialize LittleFS
 	if(!LittleFS.begin())
 	{
-		Serial << ( F( "An Error has occurred while mounting LittleFS" )) << endl;
+		Serial << ( F( "LittleFS Mounting Error" )) << endl;
 		return;
 	}
 	Serial << ( F( "LittleFS Mounted") ) << endl;
@@ -69,7 +66,7 @@ void setup()
 	Serial.printf("ESP32 Chip model = %s Rev %d\n", ESP.getChipModel(), ESP.getChipRevision());
 	Serial.printf("This chip has %d cores\n", ESP.getChipCores());
 
-	initTime();
+	// initTime();
 
 	// after the network is up, we can init the scheduler
 	// it needs networking for NTP first
@@ -83,7 +80,7 @@ void setup()
 	initWebSocket();
 
 	// Start Elegant OTA
-	AsyncElegantOTA.begin(&server);
+	AsyncElegantOTA.begin( &server );
 	// AsyncElegantOTA.begin(&server, "username", "password");
 
 	// deal with CORS access
@@ -333,138 +330,139 @@ void initWebSocket()
 
 void startWiFi( void )
 {
-	uint32_t chipId = 0;
+	static uint32_t chipId = 0;
 
-	for(int i=0; i<17; i=i+8) 
+	if( !chipId )
 	{
-		chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+		for(int i=0; i<17; i=i+8) 
+		{
+			chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+		}
 	}
 
-	Serial << ("MAC Address: ");
-	Serial.println( chipId, HEX);  // this won't print correctly using the stdout notation
+	Serial << ( F( "MAC Address: " ));
+	Serial.println( chipId, HEX );  // this won't print correctly using the stdout notation
 
-	Serial << ("WiFi STA.") << endl;
+	Serial << ( F( "WiFi STA." )) << endl;
  	WiFi.mode(WIFI_STA);
 
-
-	Serial << ( "Connecting to WiFi." ) << endl;
+	Serial << ( F( "Connecting to WiFi." )) << endl;
 	WiFi.begin( ssid, password );
 	while( WiFi.status() != WL_CONNECTED )
 	{
 		delay(500);
-		Serial << (".");
+		Serial << (F("."));
 	}
 	Serial << endl;
-	Serial << ("WiFi connected.") << endl;
-	Serial << ("Wifi RSSI=") << WiFi.RSSI() << endl;
+	Serial << (F( "WiFi connected." )) << endl;
+	Serial << (F( "Wifi RSSI=" )) << WiFi.RSSI() << endl;
 	Serial << ( WiFi.localIP() ) << endl;
 
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
-
-	Serial << ( "high") << endl;
-	delay(1500);	// wait for half a second or 500 milliseconds
-
-	Serial << ( "low") << endl;
-
-	delay(1500);	// wait for half a second or 500 milliseconds
-
-	Serial << getDateTimeString().c_str() << endl;
-
-	// if( Ping.ping("www.google.com", 3) )
-	// {
-	// 	Serial << ("Ping succesful.") << endl;
-	// }
-	// else
-	// {
-	// 	Serial << ("Ping failed.") << endl;
-
-	// }
-
-	// no more blinking if wifi dies
-	while(WiFi.status() != WL_CONNECTED)
-	{
-		delay( 1000 );
-	}
-}
-
-
-void initTime()
+void loop()
 {
-	struct tm timeinfo;
-
-	// Init and get the time
-	configTime( 0, 0, ntpServer1, ntpServer2 );
-	// configTzTime( "CST6CDT,M3.2.0,M11.1.0", ntpServer );
-
-	if( !getLocalTime( &timeinfo ) )
+	unsigned long currentMillis = millis();
+	if (currentMillis - previousMillis >= interval)
 	{
-		Serial.println( "Failed to obtain time" );
-		return;
-	}
+		// update counter for the next interval
+		previousMillis = currentMillis;
 
-	// this is "America/Chicago" or central time
-	setTimezone( "CST6CDT,M3.2.0,M11.1.0" );
-	Serial << getDateTimeString().c_str() << endl;
-}
+		// update our current readings
+		someTherm->updateMeasurements();
 
+		// run thermostat background logic and timers
+		someTherm->runSlowTick();
 
-// takes the special timezone strings
-void setTimezone(String timezone)
-{
-	Serial.printf( "  Setting Timezone to %s\n",timezone.c_str() );
-	setenv( "TZ",timezone.c_str(), 1 );  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
-	tzset();
-}
+		// update websocket data pipe
+		sendTelemetry();
 
+		// run the ezTime task
+		// this will poll pool.ntp.org about every 30 minutes
+		someTherm->loopTick();
 
-// 
-std::string getDateTimeString()
-{
-	struct tm timeinfo;
+		// check wifi status
+		if( (WiFi.status() != WL_CONNECTED) )
+		{
+				// it's been 10s and we haven't connected, so shut wifi down
+				// so we can start afresh
+				WiFi.disconnect();
+				delay( 5 );
+				
+				// start the wifi again
+				startWiFi();
+		}
 
-	if( !getLocalTime( &timeinfo ) )
-	{
-		Serial.println( "Failed to obtain time" );
-		return( "Failed to obtain time" );
-	}
+		if( someTherm->isMode( MODE_COOLING ) )
+		{
+			// thermostat logic
+			if( someTherm->getTemperature_f() > ( someTherm->getTemperatureSetting() + someTherm->getTempHysteresis() ) )
+			{
+				// turn on the cooler (if we can)
+				if( someTherm->turnOnCooler() )
+				{
+					sendCurrentMode();
+					sendDelayStatus( false );
+				}
 
-	Serial.println( &timeinfo, "%A, %B %d %Y %H:%M:%S" );
-	
-	//50 chars should be enough
-	char timeStringBuff[50];
-	strftime( timeStringBuff, sizeof(timeStringBuff), "%A, %B %d %Y %H:%M:%S", &timeinfo );
+				// allow the extended fan run time happen again
+				someTherm->clearFanRunOnce();
+			}
+			else
+			if( someTherm->getTemperature_f() <= someTherm->getTemperatureSetting() - someTherm->getTempHysteresis() )
+			{
+				// turn off the cooler, but run fan for a little longer
+				someTherm->turnOffCooler();
+				sendCurrentMode();
+				sendDelayStatus( false );
+			}
 
-	std::string foo( timeStringBuff );
-	return foo;
+		}
+		else
+		if( someTherm->isMode( MODE_HEATING ) )
+		{
+			if( someTherm->getTemperature_f() < ( someTherm->getTemperatureSetting() - someTherm->getTempHysteresis() ) )
+			{
+				// turn on the heater (if we can)
+				if( someTherm->turnOnHeater() )
+				{
+					sendCurrentMode();
+					sendDelayStatus( false );
+				}
 
-//   Serial.print("Day of week: ");
-//   Serial.println(&timeinfo, "%A");
-//   Serial.print("Month: ");
-//   Serial.println(&timeinfo, "%B");
-//   Serial.print("Day of Month: ");
-//   Serial.println(&timeinfo, "%d");
-//   Serial.print("Year: ");
-//   Serial.println(&timeinfo, "%Y");
-//   Serial.print("Hour: ");
-//   Serial.println(&timeinfo, "%H");
-//   Serial.print("Hour (12 hour format): ");
-//   Serial.println(&timeinfo, "%I");
-//   Serial.print("Minute: ");
-//   Serial.println(&timeinfo, "%M");
-//   Serial.print("Second: ");
-//   Serial.println(&timeinfo, "%S");
+				// allow the extended fan run time happen again
+				someTherm->clearFanRunOnce();
+			}
+			else
+			if( someTherm->getTemperature_f() >= someTherm->getTemperatureSetting() + someTherm->getTempHysteresis() )
+			{
+				// turn off the heater, but run fan for a little longer
+				someTherm->turnOffHeater();
+				sendCurrentMode();
+				sendDelayStatus( false );
+			}
+		}
+		else
+		{
+			// off
+			someTherm->turnOffAll();
+			sendDelayStatus( false );
 
-//   Serial.println("Time variables");
-//   char timeHour[3];
-//   strftime(timeHour,3, "%H", &timeinfo);
-//   Serial.println(timeHour);
-//   char timeWeekDay[10];
-//   strftime(timeWeekDay,10, "%A", &timeinfo);
-//   Serial.println(timeWeekDay);
-//   Serial.println();
+		}
+
+		// only check to update the eeprom once per loop
+		// the eeprom will only write to the flash if the 
+		// datastructure cache has been changed
+		someTherm->saveSettings();
+
+		// clean up dangling websockets
+		 webSock.cleanupClients();
+
+		// sometimes getting time will fail, so try it again
+		if( !someTherm->mySched.weHaveTime )
+			someTherm->sched_init();
+
+	} // end of 10s loop
 }
 
 
@@ -532,7 +530,7 @@ void sendTelemetry( void )
 	telemetry[ "tempAvg" ] =		someTherm->getTemperature_f();
 	telemetry[ "humidAvg" ] =		someTherm->getHumidity_f();
 	telemetry[ "presAvg" ] =		someTherm->getPressure_f();
-	telemetry[ "time" ] =			someTherm->timeZone_getTimeStr();
+	telemetry[ "time" ] =			someTherm->mySched.getDateTimeString();	//someTherm->timeZone_getTimeStr();
 	telemetry[ "delayTime" ] =		someTherm->getCompressorOffTime();
 	
 	if( MODE_OFF == someTherm->currentState() )
@@ -546,18 +544,9 @@ void sendTelemetry( void )
 	// put it into a buffer to send to the clients
 	serializeJson( doc, telemetryStr );
 
-	// if( MAC_OUTSIDE == ESP.getChipId() )
-	// {
-	// 	Serial << "Sending WS data to server" << endl;
-	// 	// send it to the server
-	// 	webSocketClient.sendTXT( telemetryStr.c_str() );	
-	// }
-	// else
-	{
-		// send it to the clients
-		notifyClients( telemetryStr );
-	}
-
+	// send it to the clients
+	notifyClients( telemetryStr );
+	
 }
 
 
