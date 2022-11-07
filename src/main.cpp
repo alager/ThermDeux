@@ -56,12 +56,13 @@ void setup()
 	  Serial << ( F( "isMode: " )) << someTherm->getMode() << endl;
 	#endif
 
-	// Initialize SPIFFS
+	// Initialize LittleFS
 	if(!LittleFS.begin())
 	{
 		Serial << ( F( "An Error has occurred while mounting LittleFS" )) << endl;
 		return;
 	}
+	Serial << ( F( "LittleFS Mounted") ) << endl;
 	
 	startWiFi();
 
