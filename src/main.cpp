@@ -530,7 +530,7 @@ void sendTelemetry( void )
 	telemetry[ "tempAvg" ] =		someTherm->getTemperature_f();
 	telemetry[ "humidAvg" ] =		someTherm->getHumidity_f();
 	telemetry[ "presAvg" ] =		someTherm->getPressure_f();
-	telemetry[ "time" ] =			someTherm->mySched.getDateTimeString();	//someTherm->timeZone_getTimeStr();
+	telemetry[ "time" ] =			someTherm->mySched.getDateTimeString();
 	telemetry[ "delayTime" ] =		someTherm->getCompressorOffTime();
 	
 	if( MODE_OFF == someTherm->currentState() )

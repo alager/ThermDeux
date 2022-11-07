@@ -612,15 +612,6 @@ timezone_e MyThermostat::timeZone_get( void )
 	return eepromData.localTimeZone;
 }
 
-std::string MyThermostat::timeZone_getTimeStr( void )
-{
-	// return mySched.myTZ.dateTime( "l, g:i:s A" ).c_str();
-	// return std::sprintf( "%A, %B %d %Y %H:%M:%S", &mySched.timeinfo );
-	Serial.println( &mySched.timeinfo, "%A");
-
-	std::string foo = "myTime";
-	return foo;
-}
 
 // return true if the cookie is valid
 // otherwise return false
@@ -676,8 +667,6 @@ void MyThermostat::eepromWriteFirstValues( void )
 		eepromData.fanTime[ dow ][ 1 ].hour = 0;
 		eepromData.fanTime[ dow ][ 1 ].minute = 0;
 		eepromData.fanTime[ dow ][ 1 ].runTime = 0;
-
-
 
 	}
 

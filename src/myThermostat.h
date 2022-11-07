@@ -108,8 +108,6 @@ class MyThermostat
 
 		void timeZone_set( timezone_e tz );
 		timezone_e timeZone_get( void );
-		std::string timeZone_getTimeStr( void );
-
 
 		void sched_init( void );
 
