@@ -145,10 +145,6 @@ void Scheduler::init( timezone_e new_tz )
 	// Provide official timezone names
 	// https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 	Serial <<  F("Timezone: " ) << timeZoneStr[ tz ].c_str() << endl;
-	Serial << ( &timeinfo, "%A, %B %d %Y %H:%M:%S" ) << endl;
-
-	// myTZ.setLocation( timeZoneStr[ tz ].c_str() );
-	// myTZ.setDefault();
 }
 
 std::string Scheduler::getDateTimeString()
