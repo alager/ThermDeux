@@ -13,9 +13,9 @@ The ESP32 is better at connecting to WiFi 6 routers than the ESP8266, so the Deu
 <br>
 
 TODO:
-- optimize the sprite sheet to remove unused sprites - mostly done
+- **add AUX heat operation**
+- **fully test NTP operation after ezTime removal**
 - add a few more mario sprites to allow "running" when heat or cool is active
 - add schedules - in progress
-- ~~add time zone user entry.~~ Added, but ezTime doesn't update, it needs a restart. delete & recreate the object causes WDT reset
 - add fan only schedule - in progress
 - add fan manual control to UI - done
