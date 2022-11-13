@@ -14,7 +14,6 @@ The ESP32 is better at connecting to WiFi 6 routers than the ESP8266, so the Deu
 
 TODO:
 - **add AUX heat operation**
-- **fully test NTP operation after ezTime removal**
 - add a few more mario sprites to allow "running" when heat or cool is active
 - add schedules - in progress
 - add fan only schedule - in progress
