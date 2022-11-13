@@ -66,8 +66,6 @@ void setup()
 	Serial.printf("ESP32 Chip model = %s Rev %d\n", ESP.getChipModel(), ESP.getChipRevision());
 	Serial.printf("This chip has %d cores\n", ESP.getChipCores());
 
-	// initTime();
-
 	// after the network is up, we can init the scheduler
 	// it needs networking for NTP first
 	someTherm->sched_init();
@@ -302,17 +300,9 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 				// store the new timezone value
 				someTherm->timeZone_set( (timezone_e)newTz );
 
-				// debug console output
-				Serial << F("json value: ") << newTz << endl;
-				// Serial << F("Setting new time zone to: ") << someTherm->mySched.timeZone[ someTherm->mySched.tz ].c_str() << mendl;
-
-				// the timezone possible just changed, so update the ezTime object
-				// someTherm->mySched.myTZ.setLocation( someTherm->mySched.timeZone[ someTherm->mySched.tz ].c_str() );
-
-				// myTZ.setLocation( F("America/Chicago") );
-				// waitForSync();
-
-				// Serial << F("Setting new time zone DONE") << mendl;
+				// the timezone possible just changed, so update the NTP system
+				// Using "CST6CDT,M3.2.0,M11.1.0" for "America/Chicago" or central time
+				someTherm->mySched.setTimezone( someTherm->mySched.timeZoneStr[ (timezone_e)newTz ].c_str() );
 				return;
 			 }
 		}

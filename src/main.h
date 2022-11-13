@@ -13,11 +13,6 @@ const uint32_t interval = 10000;
 
 #include <Arduino.h>
 
-
-void initTime( void );
-std::string getDateTimeString();
-void setTimezone( String timezone );
-
 // main.cpp prototypes
 void sendTelemetry( void );
 void preModeChange( void );
