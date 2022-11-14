@@ -37,6 +37,7 @@ var settingsView;
 var dsplyTime;
 var fanId;
 var fanTimeId;
+var auxHeatId;
 
 // to handle websocket (re)connections
 const gateway = `ws://${window.location.hostname}/ws`;
@@ -276,6 +277,25 @@ function onMessage( event )
 			fanId.classList.remove( "fanSpin" );
 		}
 	}
+	else
+	if( data.hasOwnProperty( "auxHeat" ) )
+	{
+		var auxHeat = data.auxHeat;
+
+		if( auxHeat.hasOwnProperty( "state" ) )
+		{
+			if( auxHeat.state == true )
+			{
+				// turn the sprite to color
+				auxHeatId.classList.remove( "greyScale" );
+			}
+			else
+			{
+				// turn the sprite back to grey
+				auxHeatId.classList.add( "greyScale" );
+			}
+		}
+	}
 }
 
 // do a reverse lookup for key by value
@@ -396,6 +416,11 @@ function initButtons()
 	document.getElementById('clickMode').addEventListener('click', clickMode);
 	document.getElementById('hammer').addEventListener('click', clickHammer);
 	document.getElementById('star').addEventListener('click', clickStar);
+	
+	auxHeatId = document.getElementById('aux');
+	auxHeatId.addEventListener('click', clickAux);
+	auxHeatId.addEventListener('long-press', longClickAux);
+
 	fanId = document.getElementById('fan');
 	fanId.addEventListener('click', clickFan);
 	fanId.addEventListener('long-press', longClickFan);
@@ -455,6 +480,28 @@ function clickFan(  )
 	fan.fanClick = fanClick;
 	websocket.send( JSON.stringify( fan ));
 }
+
+// add more to time to aux
+function clickAux( )
+{
+	var auxHeat = {};
+	var auxClick = {};
+	auxClick.state = true;
+	auxClick.add15minutes = true;
+	auxHeat.auxClick = auxClick;
+	websocket.send( JSON.stringify( auxHeat ) );
+}
+
+// turn off the aux heat
+function longClickAux()
+{
+	var auxHeat = {};
+	var auxClick = {};
+	auxClick.state = false;
+	auxHeat.auxClick = auxClick;
+	websocket.send( JSON.stringify( auxHeat ) );
+}
+
 
 // change to the settings view
 function clickHammer()
@@ -559,7 +606,7 @@ function showSlides(n) {
 
 				<!-- hammer takes user to settings -->
 				<div id="hammer" class="sprite hammerSprite"></div>
-
+				<div id="aux" class="sprite auxSprite greyScale"></div>
 				<button id="clickMode">Mode</button> <span id="mode">Heating</span><span id="delayId"> -- Delay</span>
 				<div id="topBlock" class="sprite blockSprite blockPosition"></div>
 				<div id="mario" class="sprite marioStanding middleRight"></div>

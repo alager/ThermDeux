@@ -10,7 +10,32 @@
 }
 
 
-/* select the Mario Standing Sprite */
+/* select the fan sprite */
+.auxSprite {
+	width: 40px; /* Icon width */
+	height: 42px; /* Icon height */
+	display: inline-block; /* Display icon as inline block */
+	zoom: 150%;
+	background-position: -410px -8px; /* Icon background position in sprite */
+
+	/* this won't move, so position it here */
+	position: absolute;
+	top: 100px;
+	left: 340px;
+}
+
+.greyScale {
+	/* default to grey, and make it color when active */
+	-webkit-filter: grayscale(100%);
+}
+
+
+.color {
+	/* default to grey, and make it color when active */
+	-webkit-filter: grayscale(100%);
+}
+
+/* select the fan sprite */
 .fanSprite {
 	width: 40px; /* Icon width */
 	height: 42px; /* Icon height */
