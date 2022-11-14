@@ -230,6 +230,34 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 				return;
 			}
 
+			JsonObject auxHeat = json[ "auxHeat" ];
+			serializeJsonPretty( auxHeat, Serial );
+			if( !auxHeat.isNull() )
+			{
+				std::string JSONRetStr;
+
+				bool aux = auxHeat[ "state" ];
+
+				if( aux == true )
+				{
+					// add 10 minutes to the aux heater
+					someTherm->turnOnAuxHeater( 60 * 10 );
+				}
+				else
+				if( aux == false )
+				{
+					someTherm->turnOffAuxHeater();
+				}
+
+				// put it into a buffer to send to the clients
+				serializeJson( json, JSONRetStr );
+
+				// send it to the clients
+				notifyClients( JSONRetStr );
+				sendTelemetry();
+				return;
+			}
+
 			JsonObject fan = json["fanClick"];
 			
 			if( !fan.isNull() )
@@ -289,8 +317,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 			
 			JsonObject settings = json["settings"];
 			if( !settings.isNull() )
-			 {
-				
+			{
 				someTherm->settings_setFanDelay( settings[ "fanDelay" ] );
 				someTherm->settings_setCompressorOffDelay( settings[ "compressorOffDelay" ] );
 				someTherm->settings_setCompressorMaxRuntime( settings[ "compressorMaxRuntime" ] );
@@ -304,7 +331,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 				// Using "CST6CDT,M3.2.0,M11.1.0" for "America/Chicago" or central time
 				someTherm->mySched.setTimezone( someTherm->mySched.timeZoneStr[ (timezone_e)newTz ].c_str() );
 				return;
-			 }
+			}
 		}
 	}
 }
@@ -377,7 +404,7 @@ void loop()
 				// it's been 10s and we haven't connected, so shut wifi down
 				// so we can start afresh
 				WiFi.disconnect();
-				delay( 5 );
+				delay( 500 );
 				
 				// start the wifi again
 				startWiFi();

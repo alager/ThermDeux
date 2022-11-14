@@ -401,7 +401,8 @@ void MyThermostat::turnOffCooler( void )
 	// turn off the fan after a delay
 	if( getFanRunTime() == 0 )
 	{
-		// turnOffFan();
+		// don't use turnOffFan(), it will set the FanRunTime to 0 
+		// and prevent use when not running
 		digitalWrite( GPIO_FAN, LOW );
 	}
 		
@@ -416,7 +417,6 @@ bool MyThermostat::turnOnCooler( void )
 	if( isSafeToRunCompressor() )
 	{
 		// the active state is cooling turn on the fan and compressor
-		// digitalWrite( GPIO_FAN, HIGH );
 		turnOnFan();
 		digitalWrite( GPIO_COMPRESSOR, HIGH );
 		digitalWrite( GPIO_OB, HIGH );
@@ -445,14 +445,18 @@ void MyThermostat::turnOffHeater( void )
 	// turn off the compressor
 	digitalWrite( GPIO_COMPRESSOR, LOW );
 
+	// turn off AUX / Emergency heat
+	turnOffAuxHeater();
+
 	// shadow the mode based on GPIO
 	currentMode = MODE_OFF;
 
 	// turn off the fan after a delay
 	if( getFanRunTime() == 0 )
 	{
+		// don't use turnOffFan(), it will set the FanRunTime to 0 
+		// and prevent use when not running
 		digitalWrite( GPIO_FAN, LOW );
-		// turnOffFan();
 	}
 }
 
@@ -462,11 +466,9 @@ bool MyThermostat::turnOnHeater( void )
 	// make sure that the cooler is off
 	digitalWrite( GPIO_OB, LOW );
 
-
 	if( isSafeToRunCompressor() )
 	{
 		// the active state is cooling turn on the fan and compressor
-		// digitalWrite( GPIO_FAN, HIGH );
 		turnOnFan();
 		digitalWrite( GPIO_COMPRESSOR, HIGH );
 
@@ -482,11 +484,30 @@ bool MyThermostat::turnOnHeater( void )
 }
 
 
+// set the GPIO for the AUX heater to on
+// time is the number of seconds to run
+// if time is passed in, add it to the exiting time
+bool MyThermostat::turnOnAuxHeater( unsigned long time )
+{
+	// Always make sure the fan is on if AUX is on
+	turnOnFan();
+	digitalWrite( GPIO_EMGHEAT, HIGH );
+}
+
+
+// set the GPIO for the AUX heater to off
+void MyThermostat::turnOffAuxHeater( void )
+{
+	digitalWrite( GPIO_EMGHEAT, LOW );
+}
+
+
 // return the current run mode
 mode_e MyThermostat::currentState( void )
 {
 	return currentMode;
 }
+
 
 void MyThermostat::turnOffAll( void )
 {
@@ -499,6 +520,7 @@ void MyThermostat::turnOffAll( void )
 	// turn off the heating & cooling
 	digitalWrite( GPIO_OB, LOW );
 	digitalWrite( GPIO_COMPRESSOR, LOW );
+	digitalWrite( GPIO_EMGHEAT, LOW );
 
 	if( currentMode != MODE_OFF )
 	{
@@ -632,8 +654,9 @@ void MyThermostat::eepromWriteFirstValues( void )
 	eepromData.hotTemp =	63.5f;
 	eepromData.hysteresis =	0.2f;
 	eepromData.mode =		MODE_OFF;
+	eepromData.auxHeat =	false;
 
-	eepromData.fanDelay =			60;			// 2 minutes in seconds ( our heat pump runs for an additional 60 seconds after fan is told to turn off )
+	eepromData.fanDelay =			90;			// 2 minutes in seconds ( our heat pump runs for an additional 60 seconds after fan is told to turn off )
 	eepromData.compressorOffDelay =	300;		// 5 minutes in seconds		
 	eepromData.compressorMaxRuntime = 18000;	// 5 hours in seconds
 

@@ -11,7 +11,7 @@
 #define GPIO_FAN 		(2)		/* G */
 #define GPIO_COMPRESSOR	(14)	/* Y */
 #define GPIO_OB	(12)			/* O/B */
-#define GPIO_EMGHEAT	(13)	
+#define GPIO_EMGHEAT	(13)	/* AUX */
 
 
 typedef enum
@@ -22,7 +22,7 @@ typedef enum
 } __attribute__((packed)) mode_e;
 
 
-#define MAGIC_COOKIE	( 0xdebb1e06 )
+#define MAGIC_COOKIE	( 0xdebb1e07 )
 typedef struct 
 {
 	unsigned long	cookie;					// magic cookie for versioning
@@ -30,6 +30,7 @@ typedef struct
 	float			hotTemp;				// the hot temperature setting
 	float			hysteresis;				// the amount that we allow above or below the set temperature
 	mode_e			mode;					// the last mode
+	bool			auxHeat;				// is aux heat on or off
 
 	unsigned short	fanDelay;				// number of seconds the fan runs after the compressor 
 											// turns off ( our heat pump runs for an additional 60 seconds after fan is told to turn off )
@@ -84,6 +85,9 @@ class MyThermostat
 
 		void turnOffHeater( void );
 		bool turnOnHeater( void );
+
+		bool turnOnAuxHeater( unsigned long time );
+		void turnOffAuxHeater( void );
 
 		mode_e currentState( void );
 		void turnOffAll( void );
