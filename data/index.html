@@ -123,19 +123,21 @@ function onMessage( event )
 			modeColor = "off";
 			tempSet.innerHTML = "Off";
 			delayId.hidden = false;
-
+			auxHeatId.hidden = true;
 		}
 		else
 		if( tlm.mode == 1 )
 		{
 			modeStr = "Cooling";
 			modeColor = "cooling";
+			auxHeatId.hidden = true;
 		}
 		else
 		if( tlm.mode == 2 )
 		{
 			modeStr = "Heating";
 			modeColor = "heating";
+			auxHeatId.hidden = false;
 		}
 
 		modeSetting.innerHTML = modeStr;
@@ -175,6 +177,20 @@ function onMessage( event )
 		// change the color for the current state
 		temperature.classList.remove( "off", "cooling", "heating" );
 		temperature.classList.add( modeColor );
+
+		
+		// update the aux sprite
+		if( tlm.auxTime > 0 )
+		{
+			// turn the sprite to color
+			auxHeatId.classList.remove( "greyScale" );
+		}
+		else
+		{
+			// turn the sprite back to grey
+			auxHeatId.classList.add( "greyScale" );
+		}
+		
 		
 		// draw an XY line chart
 		// data = thermLineChart( tempAvg, humidAvg, presAvg );
@@ -278,13 +294,13 @@ function onMessage( event )
 		}
 	}
 	else
-	if( data.hasOwnProperty( "auxHeat" ) )
+	if( data.hasOwnProperty( "auxClick" ) )
 	{
-		var auxHeat = data.auxHeat;
+		var auxClick = data.auxClick;
 
-		if( auxHeat.hasOwnProperty( "state" ) )
+		if( auxClick.hasOwnProperty( "state" ) )
 		{
-			if( auxHeat.state == true )
+			if( auxClick.state == true )
 			{
 				// turn the sprite to color
 				auxHeatId.classList.remove( "greyScale" );

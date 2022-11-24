@@ -3,6 +3,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include <string>
+#include <queue>
 #include <Streaming.h>
 
 #include <Scheduler.h>
@@ -117,9 +118,56 @@ float MyThermostat::getTemperature_f()
 	// low pass filter
 	outputTemp += ( temperature - outputTemp ) / a;
 	
+	// calculate the slope of the temperatures over time
+	calculateSlope( outputTemp );
+
 	return outputTemp;
 }
 
+// calculate the slope of the temperature over time
+void MyThermostat::calculateSlope( float temperature )
+{
+	// static bool firstRun = true;
+	temperatureQue.push( temperature );
+
+	if( temperatureQue.size() > 15 )
+	{
+		float prev;
+		float cur;
+		slope = 0;
+
+		prev = temperatureQue.front();
+		temperatureQue.pop();
+		Serial << "slope: " << prev << ",";
+		
+		while( temperatureQue.size() )
+		{
+			cur = temperatureQue.front();
+			temperatureQue.pop();
+			Serial << cur << ",";
+			slope += cur - prev;
+			prev = cur;
+		}
+		Serial << ": "<< slope << endl;
+
+		newSlope = true;
+	}
+}
+
+float MyThermostat::getSlope( void )
+{
+	return slope;
+}
+
+void MyThermostat::setOldSlope( void )
+{
+	newSlope = false;
+}
+
+bool MyThermostat::isNewSlope( void )
+{
+	return newSlope;
+}
 
 // get the temperature and convert it to a string
 std::string MyThermostat::getTemperature()
@@ -252,6 +300,7 @@ void MyThermostat::runSlowTick( void )
 {
 	// decrement or clear the run once flag, so the fan can be set to run again
 	decrementFanRunTime();
+	decrementAuxRunTime();
 
 	// decrement and 
 	decrementCompressorOffTime();
@@ -342,6 +391,7 @@ float MyThermostat::getTempHysteresis( void )
 	return eepromData.hysteresis;
 }
 
+
 // set the fan run time in seconds (10 seconds minimum)
 // set to 0 to turn off
 void MyThermostat::setFanRunTime( unsigned long time )
@@ -349,14 +399,14 @@ void MyThermostat::setFanRunTime( unsigned long time )
 	if( time < 10UL )
 		time = 0UL;
 
-	fanRunTime = time / 10;
+	fanRunTime = time / 10UL;
 }
 
 
 // returns the remaining fan run time in seconds
 unsigned long MyThermostat::getFanRunTime( void )
 {
-	return fanRunTime * 10;
+	return fanRunTime * 10UL;
 }
 
 
@@ -483,22 +533,49 @@ bool MyThermostat::turnOnHeater( void )
 	return false;
 }
 
+// set the aux heater run time in seconds (10 seconds minimum)
+// set to 0 to turn off
+void MyThermostat::setAuxRunTime( unsigned long time )
+{
+	if( time < 10UL )
+		time = 0UL;
+
+	auxRunTime = time / 10UL;
+}
+
+
+// returns the remaining aux run time in seconds
+unsigned long MyThermostat::getAuxRunTime( void )
+{
+	return auxRunTime * 10;
+}
+
+
+void MyThermostat::decrementAuxRunTime( void )
+{
+	if( auxRunTime )
+		auxRunTime--;
+}
 
 // set the GPIO for the AUX heater to on
 // time is the number of seconds to run
 // if time is passed in, add it to the exiting time
-bool MyThermostat::turnOnAuxHeater( unsigned long time )
+bool MyThermostat::turnOnAuxHeater( void )
 {
+	Serial << "AUX ON" << endl;
 	// Always make sure the fan is on if AUX is on
 	turnOnFan();
 	digitalWrite( GPIO_EMGHEAT, HIGH );
+	return true;
 }
 
 
 // set the GPIO for the AUX heater to off
 void MyThermostat::turnOffAuxHeater( void )
 {
+	Serial << "AUX OFF" << endl;
 	digitalWrite( GPIO_EMGHEAT, LOW );
+	setAuxRunTime( 0ul );
 }
 
 
@@ -507,7 +584,6 @@ mode_e MyThermostat::currentState( void )
 {
 	return currentMode;
 }
-
 
 void MyThermostat::turnOffAll( void )
 {
@@ -520,7 +596,7 @@ void MyThermostat::turnOffAll( void )
 	// turn off the heating & cooling
 	digitalWrite( GPIO_OB, LOW );
 	digitalWrite( GPIO_COMPRESSOR, LOW );
-	digitalWrite( GPIO_EMGHEAT, LOW );
+	turnOffAuxHeater();
 
 	if( currentMode != MODE_OFF )
 	{
@@ -654,9 +730,8 @@ void MyThermostat::eepromWriteFirstValues( void )
 	eepromData.hotTemp =	63.5f;
 	eepromData.hysteresis =	0.2f;
 	eepromData.mode =		MODE_OFF;
-	eepromData.auxHeat =	false;
 
-	eepromData.fanDelay =			90;			// 2 minutes in seconds ( our heat pump runs for an additional 60 seconds after fan is told to turn off )
+	eepromData.fanDelay =			60;			// 2 minutes in seconds ( our heat pump runs for an additional 60 seconds after fan is told to turn off )
 	eepromData.compressorOffDelay =	300;		// 5 minutes in seconds		
 	eepromData.compressorMaxRuntime = 18000;	// 5 hours in seconds
 
@@ -694,7 +769,7 @@ void MyThermostat::eepromWriteFirstValues( void )
 	}
 
 	this->saveSettings();
-	  
+
 }
 
 

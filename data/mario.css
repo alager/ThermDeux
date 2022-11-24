@@ -30,11 +30,6 @@
 }
 
 
-.color {
-	/* default to grey, and make it color when active */
-	-webkit-filter: grayscale(100%);
-}
-
 /* select the fan sprite */
 .fanSprite {
 	width: 40px; /* Icon width */

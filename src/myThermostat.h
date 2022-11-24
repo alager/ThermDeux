@@ -4,13 +4,14 @@
 
 #include "Arduino.h"
 #include <string>
+#include <queue>
 #include <EEPROM.h>
 #include <Scheduler.h>
 
 
 #define GPIO_FAN 		(2)		/* G */
 #define GPIO_COMPRESSOR	(14)	/* Y */
-#define GPIO_OB	(12)			/* O/B */
+#define GPIO_OB			(12)	/* O/B */
 #define GPIO_EMGHEAT	(13)	/* AUX */
 
 
@@ -30,7 +31,6 @@ typedef struct
 	float			hotTemp;				// the hot temperature setting
 	float			hysteresis;				// the amount that we allow above or below the set temperature
 	mode_e			mode;					// the last mode
-	bool			auxHeat;				// is aux heat on or off
 
 	unsigned short	fanDelay;				// number of seconds the fan runs after the compressor 
 											// turns off ( our heat pump runs for an additional 60 seconds after fan is told to turn off )
@@ -86,8 +86,15 @@ class MyThermostat
 		void turnOffHeater( void );
 		bool turnOnHeater( void );
 
-		bool turnOnAuxHeater( unsigned long time );
+		void setAuxRunTime( unsigned long );
+		unsigned long getAuxRunTime( void );
+		void decrementAuxRunTime( void );
+		bool turnOnAuxHeater( void );
 		void turnOffAuxHeater( void );
+		void calculateSlope( float temperature );
+		float getSlope( void );
+		void setOldSlope( void );
+		bool isNewSlope( void );
 
 		mode_e currentState( void );
 		void turnOffAll( void );
@@ -122,8 +129,12 @@ class MyThermostat
 		unsigned long 	fanRunTime;
 		unsigned long	compressorOffTime;
 
-		bool 			fanRunOnce;
+		bool 			fanRunOnce;				// used to let the fan run after the compressor turns off
 		bool 			safeToRunCompressor;
+		unsigned long		auxRunTime;
+		std::queue<float>	temperatureQue;
+		float				slope;
+		bool				newSlope;
 
 		myEEprom_t		eepromData;
 		
