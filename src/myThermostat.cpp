@@ -23,6 +23,7 @@ MyThermostat::MyThermostat( )
 {
 	// read in the eeprom settings
 	eepromInit();
+	fanRunTime = 0;
 }
 
 
@@ -32,6 +33,8 @@ MyThermostat::MyThermostat( mode_e mode )
 
 	// read in the eeprom settings
 	eepromInit();
+
+	fanRunTime = 0;
 
 	eepromData.mode = mode;
 	EEPROM.put( addr, eepromData );
