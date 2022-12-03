@@ -12,6 +12,10 @@
 
 uint8_t BME280_i2caddr = 0x76;
 
+#define I2C_SDA ( 0x04 )
+#define I2C_SCL ( 0x05 )
+TwoWire I2CBME = TwoWire(0);
+
 
 // create the initial data structures
 // and connect to the BME280
@@ -42,8 +46,11 @@ void MyThermostat::init()
 	safeToRunCompressor = true;
 	setCompressorOffTime( eepromData.compressorOffDelay );
 
+	// use the I2CBME object to reasign the i2c pins
+	I2CBME.begin(I2C_SDA, I2C_SCL, 100000);
+
 	unsigned status;
-    status = bme.begin( BME280_i2caddr );  
+    status = bme.begin( BME280_i2caddr,  &I2CBME );  
     if (!status) {
         Serial << (F("Could not find a valid BME280 sensor, check wiring, address, sensor ID!")) << endl;
         Serial << (F("SensorID was: 0x")); Serial.println(bme.sensorID(),16);

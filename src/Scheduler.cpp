@@ -157,14 +157,22 @@ std::string Scheduler::getDateTimeString()
 		return( "Failed to obtain time" );
 	}
 
-	Serial.println( &timeinfo, "%A, %B %d %Y %H:%M:%S" );
+	Serial.println( &timeinfo, "%A, %I:%M:%S" );
 	
-	//50 chars should be enough
-	char timeStringBuff[50];
-	strftime( timeStringBuff, sizeof(timeStringBuff), "%A, %B %d %Y %H:%M:%S", &timeinfo );
+	//11 chars each should be enough
+	char timeStringBuff[11];
+	char dayStringBuff[11];
+	strftime( dayStringBuff, sizeof(dayStringBuff), "%A, ", &timeinfo );
+	strftime( timeStringBuff, sizeof(timeStringBuff), "%I:%M:%S", &timeinfo );
+	
+	// remove leading zero from time if it exists
+	if( timeStringBuff[ 0 ] == '0' )
+		timeStringBuff[ 0 ] = ' ';
 
-	std::string foo( timeStringBuff );
-	return foo;
+	// create std strings from the char arrays, then concat them in the return
+	std::string foo( dayStringBuff );
+	std::string bar( timeStringBuff );
+	return foo + bar;
 }
 
 
