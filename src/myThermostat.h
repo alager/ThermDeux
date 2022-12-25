@@ -19,7 +19,8 @@ typedef enum
 {
 	MODE_OFF,
 	MODE_COOLING,
-	MODE_HEATING
+	MODE_HEATING,
+	MODE_EMERGENCY_HEAT
 } __attribute__((packed)) mode_e;
 
 

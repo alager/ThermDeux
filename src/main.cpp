@@ -178,7 +178,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 			mode_e mode = someTherm->getMode();
 
 			// cycle through the modes of operation
-			if( mode == MODE_HEATING )
+			if( mode == MODE_EMERGENCY_HEAT )
 				mode = MODE_OFF;
 			else
 				mode = (mode_e)(mode + 1);
@@ -470,9 +470,9 @@ void loop()
 						someTherm->turnOnAuxHeater();
 						// turn on for 3 minutes
 						someTherm->setAuxRunTime( 60 * 3 );
-			}
+					}
 				}
-			else
+				else
 				if( someTherm->isNewSlope() )
 				{
 					someTherm->setOldSlope();
@@ -488,8 +488,8 @@ void loop()
 						{
 							slopeCounter = 0;
 							someTherm->turnOnAuxHeater();
-							// turn on for 3 minutes
-							someTherm->setAuxRunTime( 60 * 3 );
+							// turn on for 10 minutes
+							someTherm->setAuxRunTime( 60 * 10 );
 							Serial << "Aux on for slope: " << someTherm->getSlope() << endl;
 						}
 					}
@@ -509,6 +509,31 @@ void loop()
 				someTherm->turnOffHeater();
 				underTempCounter = 0;
 				slopeCounter = 0;
+				sendCurrentMode();
+				sendDelayStatus( false );
+			}
+		}
+		else
+		if( someTherm->isMode( MODE_EMERGENCY_HEAT ) )
+		{
+			if( someTherm->getTemperature_f() < ( someTherm->getTemperatureSetting() - someTherm->getTempHysteresis() ) )
+			{
+				// turn on the heater
+				if( someTherm->turnOnAuxHeater() )
+				{
+					sendCurrentMode();
+					sendDelayStatus( false );
+					// turn on for 60 minutes
+					someTherm->setAuxRunTime( 60 * 60 );
+				}
+
+				// allow the extended fan run time happen again
+				someTherm->clearFanRunOnce();
+			}
+			else
+			if( someTherm->getTemperature_f() >= someTherm->getTemperatureSetting() + someTherm->getTempHysteresis() )
+			{		
+				someTherm->turnOffHeater();
 				sendCurrentMode();
 				sendDelayStatus( false );
 			}

@@ -348,7 +348,7 @@ float MyThermostat::getTemperatureSetting( void )
 		return eepromData.coolTemp;
 	}
 	else
-	if( isMode( MODE_HEATING ) )
+	if( isMode( MODE_HEATING ) || isMode( MODE_EMERGENCY_HEAT ) )
 	{
 		return eepromData.hotTemp;
 	}
@@ -374,6 +374,12 @@ void MyThermostat::setTemperatureSetting( float newTemp )
 	{
 		eepromData.hotTemp = newTemp;
 		Serial.println( "isMode: heating" );
+	}
+	else
+	if( isMode( MODE_EMERGENCY_HEAT ) )
+	{
+		eepromData.hotTemp = newTemp;
+		Serial.println( "isMode: emergency heating" );
 	}
 	else
 	if( isMode( MODE_OFF ) )
@@ -543,6 +549,7 @@ bool MyThermostat::turnOnHeater( void )
 	return false;
 }
 
+
 // set the aux heater run time in seconds (10 seconds minimum)
 // set to 0 to turn off
 void MyThermostat::setAuxRunTime( unsigned long time )
@@ -576,6 +583,9 @@ bool MyThermostat::turnOnAuxHeater( void )
 	// Always make sure the fan is on if AUX is on
 	turnOnFan();
 	digitalWrite( GPIO_EMGHEAT, HIGH );
+
+	// shadow the mode based on GPIO
+	currentMode = MODE_EMERGENCY_HEAT;
 	return true;
 }
 
@@ -585,6 +595,10 @@ void MyThermostat::turnOffAuxHeater( void )
 {
 	Serial << "AUX OFF" << endl;
 	digitalWrite( GPIO_EMGHEAT, LOW );
+
+	// shadow the mode based on GPIO
+	currentMode = MODE_OFF;
+	
 	setAuxRunTime( 0ul );
 }
 
