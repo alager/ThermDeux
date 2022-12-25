@@ -139,6 +139,13 @@ function onMessage( event )
 			modeColor = "heating";
 			auxHeatId.hidden = false;
 		}
+		else
+		if( tlm.mode == 3 )
+		{
+			modeStr = "Emergency Heat";
+			modeColor = "heating";
+			auxHeatId.hidden = false;
+		}
 
 		modeSetting.innerHTML = modeStr;
 		tempSet.classList.remove( "off", "cooling", "heating" );
@@ -172,6 +179,11 @@ function onMessage( event )
 				delayId.hidden = false;
 			else
 				delayId.hidden = true;
+		}
+		else
+		if( tlm.currentMode == "3" )
+		{
+			modeColor = "heating";
 		}
 
 		// change the color for the current state
@@ -224,6 +236,12 @@ function onMessage( event )
 			modeStr = "Heating";
 			modeColor = "heating";
 		}
+		else
+		if( mode == 3 )
+		{
+			modeStr = "Emergency Heat";
+			modeColor = "heating";
+		}
 
 		modeSetting.innerHTML = modeStr;
 		tempSet.classList.remove( "off", "cooling", "heating" );
@@ -244,7 +262,7 @@ function onMessage( event )
 			modeColor = "cooling";
 		}
 		else
-		if( currentMode == "2" )
+		if( currentMode == "2" || currentMode == "3" )
 		{
 			modeColor = "heating";
 		}
