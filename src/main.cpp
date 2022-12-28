@@ -21,8 +21,8 @@
 MyThermostat *someTherm;
 
 // our wifi
-const char* ssid     = "NestRouter1";
-const char* password = "This_isapassword9";
+const char* ssid     = "ssid";
+const char* password = "xxxx";
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
