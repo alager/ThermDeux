@@ -21,8 +21,8 @@
 MyThermostat *someTherm;
 
 // our wifi
-const char* ssid     = "ssid";
-const char* password = "xxxx";
+const char* ssid     = "xxx";
+const char* password = "xxx";
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
@@ -30,8 +30,13 @@ AsyncWebServer server(80);
 // create a web socket object
 AsyncWebSocket webSock("/ws");
 
+// counters used to tell when to turn on the AUX heat
 uint16_t underTempCounter;
 uint16_t slopeCounter;
+
+// counter used to determine if we should reboot
+uint8_t disconnectedCount = 0;
+
 
 void setup() 
 {
@@ -402,20 +407,22 @@ void loop()
 		// update websocket data pipe
 		sendTelemetry();
 
-		// run the ezTime task
 		// this will poll pool.ntp.org about every 30 minutes
 		someTherm->loopTick();
 
 		// check wifi status
 		if( (WiFi.status() != WL_CONNECTED) )
 		{
-				// it's been 10s and we haven't connected, so shut wifi down
-				// so we can start afresh
-				WiFi.disconnect();
-				delay( 500 );
-				
-				// start the wifi again
-				startWiFi();
+			disconnectedCount++;
+			if( disconnectedCount > 200 )
+			{
+				// wifi has been off for 30 minutes, reboot!
+				ESP.restart();
+			}
+		}
+		else
+		{
+			disconnectedCount = 0;
 		}
 
 		if( someTherm->isMode( MODE_COOLING ) )
@@ -477,12 +484,13 @@ void loop()
 				{
 					someTherm->setOldSlope();
 					
+					// check if the temperature slope is going up or down, or staying nearly flat
 					// multiply by 100, round and then divide by 100 to get 2 decimal places
 					if( round( 100 *someTherm->getSlope() ) / 100 <= 0.01f )
 					{
-						Serial << "Slope <= 0.01" << endl;
+						Serial << F( "Slope <= 0.01" ) << endl;
 						slopeCounter++;
-						Serial << "SlopeCounter: " << slopeCounter << endl;
+						Serial << F( "SlopeCounter: " ) << slopeCounter << endl;
 						// check the slope
 						if( slopeCounter > 15 )
 						{
@@ -490,15 +498,18 @@ void loop()
 							someTherm->turnOnAuxHeater();
 							// turn on for 10 minutes
 							someTherm->setAuxRunTime( 60 * 10 );
-							Serial << "Aux on for slope: " << someTherm->getSlope() << endl;
+							Serial << F( "Aux on for slope: " ) << someTherm->getSlope() << endl;
 						}
 					}
 					else
 					{
-						Serial << "Slope " << someTherm->getSlope() << " > 0.01" << endl;
+						Serial << F( "Slope " ) << someTherm->getSlope() << F( " > 0.01" ) << endl;
 						underTempCounter = 0;
-						slopeCounter = 0;
-						someTherm->turnOffAuxHeater();
+						if( slopeCounter )
+						{
+							slopeCounter--;
+						}
+						// someTherm->turnOffAuxHeater();
 					}
 				}
 			}
@@ -617,7 +628,7 @@ void sendTelemetry( void )
 	std::string telemetryStr;
 
 	// StaticJsonObject allocates memory on the stack
-	StaticJsonDocument<200> doc;
+	StaticJsonDocument<250> doc;
 
 	JsonObject telemetry  =			doc.createNestedObject("telemetry");
 	telemetry[ "mode" ] =			someTherm->getMode();
@@ -629,6 +640,8 @@ void sendTelemetry( void )
 	telemetry[ "time" ] =			someTherm->mySched.getDateTimeString();
 	telemetry[ "delayTime" ] =		someTherm->getCompressorOffTime();
 	telemetry[ "auxTime" ] =		someTherm->getAuxRunTime();
+	telemetry[ "slope" ] =			someTherm->getSlope();
+	telemetry[ "slopeCnt" ] =		slopeCounter;
 	
 	if( MODE_OFF == someTherm->currentState() )
 		telemetry[ "fanTime" ] =		someTherm->getFanRunTime();
