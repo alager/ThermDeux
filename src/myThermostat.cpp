@@ -579,7 +579,7 @@ void MyThermostat::decrementAuxRunTime( void )
 // if time is passed in, add it to the exiting time
 bool MyThermostat::turnOnAuxHeater( void )
 {
-	Serial << "AUX ON" << endl;
+	Serial << F( "AUX ON" ) << endl;
 	// Always make sure the fan is on if AUX is on
 	turnOnFan();
 	digitalWrite( GPIO_EMGHEAT, HIGH );
@@ -593,7 +593,7 @@ bool MyThermostat::turnOnAuxHeater( void )
 // set the GPIO for the AUX heater to off
 void MyThermostat::turnOffAuxHeater( void )
 {
-	Serial << "AUX OFF" << endl;
+	Serial << F( "AUX OFF" ) << endl;
 	digitalWrite( GPIO_EMGHEAT, LOW );
 
 	// shadow the mode based on GPIO
