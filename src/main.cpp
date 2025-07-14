@@ -211,6 +211,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 			settings[ "fanDelay" ] = 			 someTherm->settings_getFanDelay();
 			settings[ "compressorOffDelay" ]  =	 someTherm->settings_getCompressorOffDelay();
 			settings[ "compressorMaxRuntime" ] = someTherm->settings_getCompressorMaxRuntime();
+			settings[ "invert_OB" ] = 			 someTherm->settings_getOB();
 			settings[ "timeZone" ] =			 someTherm->timeZone_get();
 		
 			//serializeJsonPretty( doc, Serial );
@@ -334,6 +335,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 				someTherm->settings_setFanDelay( settings[ "fanDelay" ] );
 				someTherm->settings_setCompressorOffDelay( settings[ "compressorOffDelay" ] );
 				someTherm->settings_setCompressorMaxRuntime( settings[ "compressorMaxRuntime" ] );
+				someTherm->settings_setOB( settings[ "invert_OB" ] );
 				
 				uint16_t newTz = settings[ "timeZone" ];
 
@@ -471,12 +473,12 @@ void loop()
 				{
 					underTempCounter++;
 					Serial << "underTempCount: " << underTempCounter << endl;
-					if( underTempCounter > 15 )
+					if( underTempCounter > MAX_UNDER_TEMP_COUNTER )
 					{
 						underTempCounter = 0;
 						someTherm->turnOnAuxHeater();
 						// turn on for 3 minutes
-						someTherm->setAuxRunTime( 60 * 3 );
+						someTherm->setAuxRunTime( TIME_3_MIN );
 					}
 				}
 				else
@@ -492,12 +494,12 @@ void loop()
 						slopeCounter++;
 						Serial << F( "SlopeCounter: " ) << slopeCounter << endl;
 						// check the slope
-						if( slopeCounter > 15 )
+						if( slopeCounter > MAX_NEGATIVE_SLOPE_COUNTER )
 						{
 							slopeCounter = 0;
 							someTherm->turnOnAuxHeater();
 							// turn on for 10 minutes
-							someTherm->setAuxRunTime( 60 * 10 );
+							someTherm->setAuxRunTime( TIME_10_MIN );
 							Serial << F( "Aux on for slope: " ) << someTherm->getSlope() << endl;
 						}
 					}
