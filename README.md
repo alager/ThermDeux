@@ -11,10 +11,11 @@ The ESP32 is better at connecting to WiFi 6 routers than the ESP8266, so the Deu
 ![heating](https://github.com/alager/smartThermostat/raw/main/ScreenShots/Heating.PNG?raw=true)
 
 <br>
+New Features:
+- add AUX heat operation
+- add fan manual control to UI
 
 TODO:
-- **add AUX heat operation**
 - add a few more mario sprites to allow "running" when heat or cool is active
 - add schedules - in progress
 - add fan only schedule - in progress
-- add fan manual control to UI - done
