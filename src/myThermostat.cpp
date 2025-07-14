@@ -80,7 +80,8 @@ void MyThermostat::init()
 	Serial << (F("\n-- Configuring GPIO --")) << endl;
 	digitalWrite( GPIO_FAN, LOW );
 	digitalWrite( GPIO_COMPRESSOR, LOW );
-	digitalWrite( GPIO_OB, LOW );
+	// digitalWrite( GPIO_OB, LOW );
+	setOB( LOW );
 	digitalWrite( GPIO_EMGHEAT, LOW );
 
 	pinMode( GPIO_FAN, OUTPUT );
@@ -458,7 +459,8 @@ void MyThermostat::turnOffCooler( void )
 
 	// turn off the compressor
 	digitalWrite( GPIO_COMPRESSOR, LOW );
-	digitalWrite( GPIO_OB, LOW );
+	// digitalWrite( GPIO_OB, LOW );
+	setOB( LOW );
 
 
 	// shadow the mode based on GPIO
@@ -485,7 +487,8 @@ bool MyThermostat::turnOnCooler( void )
 		// the active state is cooling turn on the fan and compressor
 		turnOnFan();
 		digitalWrite( GPIO_COMPRESSOR, HIGH );
-		digitalWrite( GPIO_OB, HIGH );
+		// digitalWrite( GPIO_OB, HIGH );
+		setOB( HIGH );
 
 		// shadow the mode based on GPIO
 		currentMode = MODE_COOLING;
@@ -530,7 +533,8 @@ void MyThermostat::turnOffHeater( void )
 bool MyThermostat::turnOnHeater( void )
 {
 	// make sure that the cooler is off
-	digitalWrite( GPIO_OB, LOW );
+	// digitalWrite( GPIO_OB, LOW );
+	setOB( LOW );
 
 	if( isSafeToRunCompressor() )
 	{
@@ -549,6 +553,26 @@ bool MyThermostat::turnOnHeater( void )
 	return false;
 }
 
+
+// set OB based on the invert mode
+void MyThermostat::setOB( uint8_t val )
+{
+	
+	if( settings_getOB() == true )
+	{
+		// invert the OB signal
+		if( val == LOW)
+			val = HIGH;
+		else
+			val = LOW;
+		digitalWrite( GPIO_OB, val );
+	}
+	else
+	{
+		// do not invert the OB signal
+		digitalWrite( GPIO_OB, val );
+	}
+}
 
 // set the aux heater run time in seconds (10 seconds minimum)
 // set to 0 to turn off
@@ -618,7 +642,8 @@ void MyThermostat::turnOffAll( void )
 		digitalWrite( GPIO_FAN, LOW );
 
 	// turn off the heating & cooling
-	digitalWrite( GPIO_OB, LOW );
+	// digitalWrite( GPIO_OB, LOW );
+	setOB( LOW );
 	digitalWrite( GPIO_COMPRESSOR, LOW );
 	turnOffAuxHeater();
 
@@ -710,6 +735,11 @@ unsigned short MyThermostat::settings_getCompressorMaxRuntime( void )
 	return eepromData.compressorMaxRuntime;
 }
 
+bool MyThermostat::settings_getOB( void )
+{
+	return eepromData.invert_OB;
+}
+
 void MyThermostat::settings_setFanDelay( unsigned short fanDelay )
 {
 	eepromData.fanDelay = fanDelay;
@@ -721,6 +751,12 @@ void MyThermostat::settings_setCompressorOffDelay( unsigned short compressorOffD
 void MyThermostat::settings_setCompressorMaxRuntime( unsigned short compressorMaxRuntime)
 {
 	eepromData.compressorMaxRuntime = compressorMaxRuntime;
+}
+
+// set whether to inver the OB output or not
+void MyThermostat::settings_setOB( bool invert )
+{
+	eepromData.invert_OB = invert;
 }
 
 
@@ -754,6 +790,7 @@ void MyThermostat::eepromWriteFirstValues( void )
 	eepromData.hotTemp =	63.5f;
 	eepromData.hysteresis =	0.2f;
 	eepromData.mode =		MODE_OFF;
+	eepromData.invert_OB =	false;
 
 	eepromData.fanDelay =			60;			// 2 minutes in seconds ( our heat pump runs for an additional 60 seconds after fan is told to turn off )
 	eepromData.compressorOffDelay =	300;		// 5 minutes in seconds		

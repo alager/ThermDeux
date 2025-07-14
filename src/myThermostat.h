@@ -24,7 +24,7 @@ typedef enum
 } __attribute__((packed)) mode_e;
 
 
-#define MAGIC_COOKIE	( 0xdebb1e07 )
+#define MAGIC_COOKIE	( 0xdebb1e09 )
 typedef struct 
 {
 	unsigned long	cookie;					// magic cookie for versioning
@@ -32,6 +32,7 @@ typedef struct
 	float			hotTemp;				// the hot temperature setting
 	float			hysteresis;				// the amount that we allow above or below the set temperature
 	mode_e			mode;					// the last mode
+	bool			invert_OB;				// invert the OB output, some units use on for colloing, while others use on for heat.
 
 	unsigned short	fanDelay;				// number of seconds the fan runs after the compressor 
 											// turns off ( our heat pump runs for an additional 60 seconds after fan is told to turn off )
@@ -87,6 +88,8 @@ class MyThermostat
 		void turnOffHeater( void );
 		bool turnOnHeater( void );
 
+		void setOB( uint8_t );
+
 		void setAuxRunTime( unsigned long );
 		unsigned long getAuxRunTime( void );
 		void decrementAuxRunTime( void );
@@ -114,9 +117,11 @@ class MyThermostat
 		unsigned short settings_getFanDelay( void );
 		unsigned short settings_getCompressorOffDelay( void );
 		unsigned short settings_getCompressorMaxRuntime( void );
+		bool settings_getOB( void );
 		void settings_setFanDelay( unsigned short );
 		void settings_setCompressorOffDelay( unsigned short );
 		void settings_setCompressorMaxRuntime( unsigned short );
+		void settings_setOB( bool );
 
 		void timeZone_set( timezone_e tz );
 		timezone_e timeZone_get( void );
@@ -126,12 +131,13 @@ class MyThermostat
 		Scheduler 		mySched;
 		
 	private:
-		mode_e 			currentMode;
-		unsigned long 	fanRunTime;
-		unsigned long	compressorOffTime;
+		mode_e 				currentMode;
+		unsigned long 		fanRunTime;
+		unsigned long		compressorOffTime;
+		bool				invert_OB;
 
-		bool 			fanRunOnce;				// used to let the fan run after the compressor turns off
-		bool 			safeToRunCompressor;
+		bool 				fanRunOnce;				// used to let the fan run after the compressor turns off
+		bool 				safeToRunCompressor;
 		unsigned long		auxRunTime;
 		std::queue<float>	temperatureQue;
 		float				slope;
