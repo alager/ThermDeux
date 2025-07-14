@@ -11,6 +11,12 @@ uint32_t previousMillis = 0;    // will store last time DHT was updated
 // Updates readings every 10 seconds
 const uint32_t interval = 10000;
 
+#define MAX_NEGATIVE_SLOPE_COUNTER	( 20 )
+#define MAX_UNDER_TEMP_COUNTER		( 15 )
+
+#define TIME_3_MIN					( 60 * 3 )
+#define TIME_10_MIN					( 60 * 10 )
+
 #include <Arduino.h>
 
 // main.cpp prototypes
