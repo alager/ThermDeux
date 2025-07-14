@@ -14,6 +14,7 @@ The ESP32 is better at connecting to WiFi 6 routers than the ESP8266, so the Deu
 New Features:
 - add AUX heat operation
 - add fan manual control to UI
+- added O/B inversion ability
 
 TODO:
 - add a few more mario sprites to allow "running" when heat or cool is active
