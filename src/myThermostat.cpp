@@ -617,7 +617,7 @@ bool MyThermostat::turnOnAuxHeater( void )
 // set the GPIO for the AUX heater to off
 void MyThermostat::turnOffAuxHeater( void )
 {
-	Serial << F( "AUX OFF" ) << endl;
+	// Serial << F( "AUX OFF" ) << endl;
 	digitalWrite( GPIO_EMGHEAT, LOW );
 
 	// shadow the mode based on GPIO
@@ -753,7 +753,7 @@ void MyThermostat::settings_setCompressorMaxRuntime( unsigned short compressorMa
 	eepromData.compressorMaxRuntime = compressorMaxRuntime;
 }
 
-// set whether to inver the OB output or not
+// set whether to invert the OB output or not
 void MyThermostat::settings_setOB( bool invert )
 {
 	eepromData.invert_OB = invert;
