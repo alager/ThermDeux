@@ -282,14 +282,16 @@ function onMessage( event )
 	else
 	if( data.hasOwnProperty( "settings" ) )
 	{
-		var settings = data.settings;
-		var fanDelay =	document.getElementById('fanDelay');
-		var compressorOffDelay = document.getElementById('compressorOffDelay');
-		var compressorMaxRuntime = document.getElementById('compressorMaxRuntime');
+		let settings = data.settings;
+		let fanDelay =	document.getElementById('fanDelay');
+		let compressorOffDelay = document.getElementById('compressorOffDelay');
+		let compressorMaxRuntime = document.getElementById('compressorMaxRuntime');
 
 		fanDelay.value = settings.fanDelay;
 		compressorOffDelay.value = settings.compressorOffDelay;
 		compressorMaxRuntime.value = settings.compressorMaxRuntime;
+
+		document.querySelector("input[name=invert_OB][value=" + settings.invert_OB +"]").click();
 
 		const tzVal = getObjKey( tzMap, settings.timeZone );
 		document.querySelector("input[name=timeZone][value=" + tzVal +"]").click();
@@ -349,18 +351,20 @@ var tzMap = {
 // get all the settings and send them back to the server
 function saveSettings()
 {
-	var fanDelay =				document.getElementById( 'fanDelay' );
-	var compressorOffDelay = 	document.getElementById( 'compressorOffDelay' );
-	var compressorMaxRuntime = 	document.getElementById( 'compressorMaxRuntime' );
-	var timeZone = 				document.querySelector('input[name="timeZone"]:checked');
+	let fanDelay =				document.getElementById( 'fanDelay' );
+	let compressorOffDelay = 	document.getElementById( 'compressorOffDelay' );
+	let compressorMaxRuntime = 	document.getElementById( 'compressorMaxRuntime' );
+	let invertOB = 				document.querySelector( 'input[name="invert_OB"]:checked' );
+	let timeZone = 				document.querySelector('input[name="timeZone"]:checked');
 
-	var settings = {};
+	let settings = {};
 	settings.fanDelay = fanDelay.value;
 	settings.compressorMaxRuntime = compressorMaxRuntime.value;
 	settings.compressorOffDelay = compressorOffDelay.value;
+	settings.invert_OB = invertOB.value;
 	settings.timeZone =  tzMap[ timeZone.value ];
 	
-	var mySettings = {};
+	let mySettings = {};
 	mySettings.settings = settings;
 
 	websocket.send( JSON.stringify( mySettings ) );
@@ -686,6 +690,15 @@ function showSlides(n) {
 
 					<div class="mySlides">
 						<div class="cardSize">
+							<label for="invert_OB">Invert O/B:</label><br>
+							<input type="radio" name="invert_OB" value="true"><label>True</label><br>
+							<input type="radio" name="invert_OB" value="false"><label>False</label><br>
+						</div>
+						<div class="text">True to invert O/B, false does not invert it.</div>
+					</div>
+
+					<div class="mySlides">
+						<div class="cardSize">
 							<label for="timeZone">Timezone:</label><br>
 							<input type="radio" name="timeZone" value="ePST"><label>Pacific</label><br>
 							<input type="radio" name="timeZone" value="eMST"><label>Mountian</label><br>
@@ -709,6 +722,7 @@ function showSlides(n) {
 					<span class="dot" onclick="currentSlide(2)"></span>
 					<span class="dot" onclick="currentSlide(3)"></span>
 					<span class="dot" onclick="currentSlide(4)"></span>
+					<span class="dot" onclick="currentSlide(5)"></span>
 				</div>
 			</div>
 
