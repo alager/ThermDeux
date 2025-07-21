@@ -361,7 +361,8 @@ function saveSettings()
 	settings.fanDelay = fanDelay.value;
 	settings.compressorMaxRuntime = compressorMaxRuntime.value;
 	settings.compressorOffDelay = compressorOffDelay.value;
-	settings.invert_OB = invertOB.value;
+	settings.invert_OB = (invertOB.value == "false") ? false : true;  // use this to make boolean value instead of string "false"
+
 	settings.timeZone =  tzMap[ timeZone.value ];
 	
 	let mySettings = {};
